@@ -1,6 +1,5 @@
 from App.models import User, Admin, Staff, Shift
 from App.database import db
-from datetime import datetime
 
 VALID_ROLES = {"user", "staff", "admin"}
 
@@ -35,6 +34,16 @@ def get_all_users_json():
         return []
     return [user.get_json() for user in users]
 
+#added method for scheduling purposes
+def get_all_users_by_role(role):
+    return User.query.filter_by(role=role).all()
+
+def get_all_users_by_role_json(role):
+    users = get_all_users_by_role(role)
+    if not users:
+        return []
+    return [user.get_json() for user in users]
+
 def update_user(id, username):
     user = get_user(id)
     if user:
@@ -42,3 +51,7 @@ def update_user(id, username):
         db.session.commit()
         return user
     return None
+
+#not sure if this method should be added here
+def get_all_shifts()
+    return Shift.query.all()
