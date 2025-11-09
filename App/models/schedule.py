@@ -8,7 +8,7 @@ class Schedule(db.Model):
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False) # not necessary if auto-populated by scheduler
     shifts = db.relationship("Shift", backref="schedule", lazy=True)
     
-    #add SchedulingStrategy field
+    #add SchedulingStrategy field to class
 
     def shift_count(self):
         return len(self.shifts)
