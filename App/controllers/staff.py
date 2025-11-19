@@ -3,7 +3,7 @@ from App.database import db
 from datetime import datetime
 from App.controllers.user import get_user
 
-def viewShifts(staff_id, schedule_id):
+def viewShifts(staff_id):
     # Shows only the current staff member's shifts for a given schedule
     
     staff = get_user(staff_id)
