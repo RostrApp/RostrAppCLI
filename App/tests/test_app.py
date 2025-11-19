@@ -18,6 +18,7 @@ from App.controllers import (
     get_shift 
 )
 
+# Test get_all_users_by_role(role) and get_all_users_by_role_json(role)
 
 LOGGER = logging.getLogger(__name__)
 
