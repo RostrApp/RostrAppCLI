@@ -10,6 +10,6 @@ class SchedulingStrategy(ABC):
         self.shifts = get_all_shifts()
 
     @abstractmethod
-    def schedule_shift(self):
+    def schedule_shift(self, staff_list, shift_list, creator_id):
         #return Schedule object in concrete classes
         pass

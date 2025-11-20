@@ -3,7 +3,7 @@ from App.database import db
 
 class Shift(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    staff_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    staff_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     schedule_id = db.Column(db.Integer, db.ForeignKey("schedule.id"), nullable=True)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
