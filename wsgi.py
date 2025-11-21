@@ -8,7 +8,7 @@ from App.models import User
 from App.main import create_app 
 from App.controllers import (
     create_user, get_all_users_json, get_all_users, initialize,
-    schedule_shift, clock_in, clock_out, get_shift_report, login,loginCLI
+    schedule_shift, get_combined_roster, clock_in, clock_out, get_shift_report, login,loginCLI
 )
 
 app = create_app()
@@ -228,7 +228,7 @@ def require_staff_login():
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
 
 @schedule_cli.command("create", help="Create a schedule")
-@click.argument("strategy", default="even")
+@click.argument("name")
 def create_schedule_command(strategy):
     from App.controllers.schedule import (
         create_even_schedule,
