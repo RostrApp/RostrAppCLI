@@ -53,5 +53,5 @@ def update_user(id, username):
     return None
 
 #not sure if this method should be added here
-def get_all_shifts():
+def get_all_shifts()
     return Shift.query.all()
