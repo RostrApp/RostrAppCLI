@@ -229,34 +229,13 @@ schedule_cli = AppGroup('schedule', help='Schedule management commands')
 
 @schedule_cli.command("create", help="Create a schedule")
 @click.argument("name")
-def create_schedule_command(strategy):
-    from App.controllers.schedule import (
-        create_even_schedule,
-        create_minimum_schedule,
-        create_day_night_schedule
-    )
-    from App.controllers.user import get_all_users_by_role, get_all_shifts
-
+def create_schedule_command(name):
+    from App.models import Schedule
     admin = require_admin_login()
-    all_staff = get_all_users_by_role("staff")
-    shifts = get_all_shifts()
-
-    if strategy.lower() == "even":
-        schedule = create_even_schedule(all_staff, shifts, admin.id)
-    elif strategy.lower() == "minimum":
-        schedule = create_minimum_schedule(all_staff, shifts, admin.id)
-    elif strategy.lower() == "daynight":
-        schedule = create_day_night_schedule(all_staff, shifts, admin.id)
-    else:
-        print("❌ Invalid strategy. Use: even, minimum, or daynight")
-        return
-
+    schedule = Schedule(name=name, created_by=admin.id)
     db.session.add(schedule)
     db.session.commit()
-    print(f"✅ Schedule created with {strategy} strategy:")
-    print(schedule.get_json())
-
-    
+    print(f"✅ Schedule created: {schedule.get_json()}")
 
 
 @schedule_cli.command("list", help="List all schedules")
