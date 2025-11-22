@@ -9,7 +9,7 @@ class SchedulingStrategy(ABC):
         self.all_staff = get_all_users_by_role("staff")
         self.shifts = get_all_shifts()
 
-    @abstractmethod
-    def schedule_shift(self):
-        #return Schedule object in concrete classes
-        pass
+@abstractmethod
+def schedule_shift(self, staff_list, shift_list, creator_id):
+    #return Schedule object in concrete classes
+    pass
