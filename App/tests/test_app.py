@@ -434,3 +434,86 @@ class ScheduleUnitTests(unittest.TestCase):
 
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)  # Day staff
         self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)  # Night staff
+
+class ScheduleIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        create_db()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_create_even_schedule_integration(self):
+        from App.controllers.schedule import create_even_schedule
+        admin = create_user("bob", "bobpass", "admin")
+        staff1 = create_user("jane", "janepass", "staff")
+        staff2 = create_user("alice", "alicepass", "staff")
+
+        # Create a schedule
+        schedule = Schedule(name="EvenTest", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        # Create shifts but don't commit yet
+        shifts = [
+            Shift(schedule_id=schedule.id, start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),
+            Shift(schedule_id=schedule.id, start_time=datetime(2025,11,21,12), end_time=datetime(2025,11,21,16))
+        ]
+
+        # Let scheduler assign staff_id
+        schedule = create_even_schedule([staff1, staff2], shifts, admin.id)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        self.assertEqual(len(schedule.shifts), 2)
+        self.assertIn(schedule.shifts[0].staff_id, [staff1.id, staff2.id])
+
+    def test_create_minimum_schedule_integration(self):
+        from App.controllers.schedule import create_minimum_schedule
+        admin = create_user("bob2", "bobpass", "admin")
+        staff1 = create_user("jane2", "janepass", "staff")
+
+        schedule = Schedule(name="MinTest", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        shifts = [
+            Shift(schedule_id=schedule.id, start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),
+            Shift(schedule_id=schedule.id, start_time=datetime(2025,11,21,12), end_time=datetime(2025,11,21,16))
+        ]
+
+        schedule = create_minimum_schedule([staff1], shifts, admin.id)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        for s in schedule.shifts:
+            self.assertEqual(s.staff_id, staff1.id)
+
+    def test_create_day_night_schedule_integration(self):
+        from App.controllers.schedule import create_day_night_schedule
+        admin = create_user("bob3", "bobpass", "admin")
+        day_staff = create_user("daystaff", "daypass", "staff")
+        night_staff = create_user("nightstaff", "nightpass", "staff")
+
+        schedule = Schedule(name="DayNightTest", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        shifts = [
+            Shift(schedule_id=schedule.id, start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),   # day
+            Shift(schedule_id=schedule.id, start_time=datetime(2025,11,21,20), end_time=datetime(2025,11,21,23))  # night
+        ]
+
+        schedule = create_day_night_schedule([day_staff, night_staff], shifts, admin.id)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        self.assertEqual(schedule.shifts[0].staff_id, day_staff.id)
+        self.assertEqual(schedule.shifts[1].staff_id, night_staff.id)
