@@ -17,6 +17,9 @@ from App.controllers import (
     clock_out,
     get_shift 
 )
+from App.models.even_scheduler import EvenScheduler
+from App.models.minimum_scheduler import MinimumScheduler
+from App.models.day_night_scheduler import DayNightScheduler
 
 # Test get_all_users_by_role(role) and get_all_users_by_role_json(role)
 
@@ -370,3 +373,64 @@ class UsersIntegrationTests(unittest.TestCase):
 
         with self.assertRaises(PermissionError):
             get_shift_report(staff.id)
+
+
+class ScheduleUnitTests(unittest.TestCase):
+
+    def test_even_scheduler_assigns_equally(self):
+        staff = [
+            User(username="jane", password="pass", role="staff"),
+            User(username="alice", password="pass", role="staff")
+        ]
+        db.session.add_all(staff)
+        db.session.commit()
+
+        # Create shifts in memory only
+        shifts = [
+            Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),
+            Shift(start_time=datetime(2025,11,21,12), end_time=datetime(2025,11,21,16))
+        ]
+
+        scheduler = EvenScheduler()
+        schedule = scheduler.schedule_shift(staff, shifts, creator_id=1)
+
+        assert schedule.shifts[0].staff_id == staff[0].id
+        assert schedule.shifts[1].staff_id == staff[1].id
+
+    def test_minimum_scheduler_assigns_first_staff(self):
+        staff = [
+            User(username="bob", password="pass", role="staff"),
+            User(username="tom", password="pass", role="staff")
+        ]
+        db.session.add_all(staff)
+        db.session.commit()
+
+        shifts = [
+            Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),
+            Shift(start_time=datetime(2025,11,21,12), end_time=datetime(2025,11,21,16))
+        ]
+
+        scheduler = MinimumScheduler()
+        schedule = scheduler.schedule_shift(staff, shifts, creator_id=1)
+
+        self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)
+        self.assertEqual(schedule.shifts[1].staff_id, staff[0].id)
+
+    def test_daynight_scheduler_assigns_correctly(self):
+        staff = [
+            User(username="eve", password="pass", role="staff"),
+            User(username="mallory", password="pass", role="staff")
+        ]
+        db.session.add_all(staff)
+        db.session.commit()
+
+        shifts = [
+            Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),   # day
+            Shift(start_time=datetime(2025,11,21,20), end_time=datetime(2025,11,21,23))  # night
+        ]
+
+        scheduler = DayNightScheduler()
+        schedule = scheduler.schedule_shift(staff, shifts, creator_id=1)
+
+        self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)  # Day staff
+        self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)  # Night staff
