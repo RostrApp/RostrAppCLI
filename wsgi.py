@@ -2,6 +2,7 @@ import click, pytest, sys, os
 from flask.cli import with_appcontext, AppGroup
 from datetime import datetime
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from datetime import datetime
 
 from App.database import db, get_migrate
 from App.models import User
@@ -70,19 +71,52 @@ app.cli.add_command(user_cli)
 
 shift_cli = AppGroup('shift', help='Shift management commands')
 
-@shift_cli.command("schedule", help="Admin schedules a shift and assigns it to a schedule")
-@click.argument("staff_id", type=int)
-@click.argument("schedule_id", type=int)
-@click.argument("start")
-@click.argument("end")
-def schedule_shift_command(staff_id, schedule_id, start, end):
-    from datetime import datetime
+@shift_cli.command("schedule", help="Admin schedules a shift or uses a strategy")
+@click.argument("mode")  # "manual" or "strategy"
+@click.argument("args", nargs=-1)  # flexible args
+def schedule_shift_command(mode, args):
+    from App.controllers.schedule import (
+        create_even_schedule,
+        create_minimum_schedule,
+        create_day_night_schedule
+    )
+    from App.controllers.user import get_all_users_by_role, get_all_shifts
+
     admin = require_admin_login()
-    start_time = datetime.fromisoformat(start)
-    end_time = datetime.fromisoformat(end)
-    shift = schedule_shift(admin.id, staff_id, schedule_id, start_time, end_time)
-    print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
-    print(shift.get_json())
+
+    if mode == "manual":
+        if len(args) != 4:
+            print("❌ Usage: flask shift schedule manual <staff_id> <schedule_id> <start> <end>")
+            return
+        staff_id, schedule_id, start, end = args
+        start_time = datetime.fromisoformat(start)
+        end_time = datetime.fromisoformat(end)
+        shift = schedule_shift(admin.id, int(staff_id), int(schedule_id), start_time, end_time)
+        print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
+        print(shift.get_json())
+
+    elif mode == "strategy":
+        if len(args) != 1:
+            print("❌ Usage: flask shift schedule strategy <even|min|daynight>")
+            return
+        strategy = args[0].lower()
+        staff = get_all_users_by_role("staff")
+        shifts = get_all_shifts()
+
+        if strategy == "even":
+            schedule = create_even_schedule(staff, shifts, admin.id)
+        elif strategy == "minimum":
+            schedule = create_minimum_schedule(staff, shifts, admin.id)
+        elif strategy == "daynight":
+            schedule = create_day_night_schedule(staff, shifts, admin.id)
+        else:
+            print("❌ Invalid strategy. Use: even, minimum, daynight")
+            return
+
+        db.session.add(schedule)
+        db.session.commit()
+        print(f"✅ Schedule created with {strategy} strategy:")
+        print(schedule.get_json())
 
 
 
