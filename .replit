@@ -1,0 +1,55 @@
+modules = ["python-3.12"]
+[agent]
+expertMode = true
+
+[nix]
+packages = [
+  "python39Packages.flask",
+  "python39Packages.pytest",
+  "python39Packages.werkzeug",
+  "python39Packages.sqlalchemy",
+]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Run App"
+mode = "sequential"
+author = 15397041
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flask App"
+
+[[workflows.workflow]]
+name = "Flask App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "gunicorn -c gunicorn_config.py wsgi:app"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 39675
+externalPort = 3000

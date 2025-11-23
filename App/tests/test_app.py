@@ -3,7 +3,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from App.main import create_app
 from App.database import db, create_db
 from datetime import datetime, timedelta
-from App.models import User, Schedule, Shift
+from App.models import User, Schedule, Shift, Report
 from App.controllers import (
     create_user,
     get_all_users_json,
@@ -15,7 +15,8 @@ from App.controllers import (
     get_combined_roster,
     clock_in,
     clock_out,
-    get_shift 
+    get_shift,
+    get_summary
 )
 
 # Test get_all_users_by_role(role) and get_all_users_by_role_json(role)
@@ -220,6 +221,49 @@ class UserUnitTests(unittest.TestCase):
         with pytest.raises(ValueError) as e:
             clock_out(staff.id, 999)  
         assert str(e.value) == "Invalid shift for staff"
+# Report unit tests
+    def test_get_summary(app_context):
+        alice = Staff(name="Alice")
+        bob = Staff(name="Bob")
+        db.session.add_all([alice, bob])
+        db.session.commit()
+
+        schedule = Schedule()
+        db.session.add(schedule)
+        db.session.commit()
+
+        shift1 = Shift(
+            staff_id=alice.id, 
+            schedule_id=schedule.id,
+            start_time=datetime(2025, 11, 17, 8),
+            end_time=datetime(2025, 11, 17, 16),
+            clock_in=datetime(2025, 11, 17, 8, 5),
+            clock_out=datetime(2025, 11, 17, 16),
+        )
+
+        shift2 = Shift(
+            staff_id=bob.id,
+            schedule_id=schedule.id,
+            start_time=datetime(2025, 11, 17, 8),
+            end_time=datetime(2025, 11, 17, 16),
+            clock_in=datetime(2025, 11, 17, 8, 0),
+            clock_out=datetime(2025, 11, 17, 16),
+        )
+
+        db.session.add_all([shift1, shift2])
+        db.session.commit()
+
+        summary = get_summary(schedule.id)
+
+        assert summary["schedule_id"] == schedule.id
+        assert "2025-11-17" in summary["days"]
+
+        day_data = summary["days"]["2025-11-17"]
+        assert alice.name in day_data["assigned"]
+        assert bob.name in day_data["assigned"]
+        assert alice.name in day_data["late"]
+        assert bob.name not in day_data["late"]
+        assert len(day_data["missed"]) == 0
 '''
     Integration Tests
 '''
@@ -370,3 +414,5 @@ class UsersIntegrationTests(unittest.TestCase):
 
         with self.assertRaises(PermissionError):
             get_shift_report(staff.id)
+
+

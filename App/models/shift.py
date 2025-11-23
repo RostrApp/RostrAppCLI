@@ -23,3 +23,4 @@ class Shift(db.Model):
             "clock_in": self.clock_in.isoformat() if self.clock_in else None,
             "clock_out": self.clock_out.isoformat() if self.clock_out else None
         }
+        
