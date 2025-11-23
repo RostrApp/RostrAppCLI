@@ -3,30 +3,31 @@ from App.database import db
 
 class Schedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False) # not necessary if auto-populated by scheduler
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=False)
+    admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     shifts = db.relationship("Shift", backref="schedule", lazy=True)
-    
-    #add SchedulingStrategy field to class
-
-    def shift_count(self):
-        return len(self.shifts)
 
     def get_json(self):
         return {
             "id": self.id,
-            "name": self.name,
-            "created_at": self.created_at.isoformat(),
-            "created_by": self.created_by,
-            "shift_count": self.shift_count(),
-            "shifts": [shift.get_json() for shift in self.shifts]
+            "start_date": self.start_date.isoformat(),
+            "end_date": self.end_date.isoformat(),
+            "admin_id": self.admin_id,
         }
-    
-        # according to the test plan, this class is created when
-        # staff members are assigned to shifts (i.e. timeslots)  
-        # and these assignments are added to the schedule.
 
-        # should be created by appropriate Scheduler upon refactor
+    def __init__(self, start_date, end_date, admin_id):
+         self.start_date = start_date
+         self.end_date = end_date
+         self.admin_id = admin_id
 
+    def get_shifts(self):
+         return self.shifts
 
+    def add_shift(self, shift):
+        shift.schedule = self
+        return self
+
+    def remove_shift(self, shift):
+        shift.schedule = None
+        return self
