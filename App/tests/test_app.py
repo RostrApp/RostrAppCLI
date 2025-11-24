@@ -374,6 +374,11 @@ class UsersIntegrationTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             get_shift_report(staff.id)
 
+import unittest
+from datetime import datetime
+from App.database import db
+from App.models.user import User
+from App.models.shift import Shift
 
 class ScheduleUnitTests(unittest.TestCase):
 
@@ -392,10 +397,10 @@ class ScheduleUnitTests(unittest.TestCase):
         ]
 
         scheduler = EvenScheduler()
-        schedule = scheduler.schedule_shift(staff, shifts, creator_id=1)
+        schedule = scheduler.schedule_shift(staff, shifts, admin_id=1)
 
-        assert schedule.shifts[0].staff_id == staff[0].id
-        assert schedule.shifts[1].staff_id == staff[1].id
+        self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)
+        self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)
 
     def test_minimum_scheduler_assigns_first_staff(self):
         staff = [
@@ -411,7 +416,7 @@ class ScheduleUnitTests(unittest.TestCase):
         ]
 
         scheduler = MinimumScheduler()
-        schedule = scheduler.schedule_shift(staff, shifts, creator_id=1)
+        schedule = scheduler.schedule_shift(staff, shifts, admin_id=1)
 
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)
         self.assertEqual(schedule.shifts[1].staff_id, staff[0].id)
@@ -425,12 +430,12 @@ class ScheduleUnitTests(unittest.TestCase):
         db.session.commit()
 
         shifts = [
-            Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),   # day
-            Shift(start_time=datetime(2025,11,21,20), end_time=datetime(2025,11,21,23))  # night
+            Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),   # Day
+            Shift(start_time=datetime(2025,11,21,20), end_time=datetime(2025,11,21,23))  # Night
         ]
 
         scheduler = DayNightScheduler()
-        schedule = scheduler.schedule_shift(staff, shifts, creator_id=1)
+        schedule = scheduler.schedule_shift(staff, shifts, admin_id=1)
 
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)  # Day staff
         self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)  # Night staff
