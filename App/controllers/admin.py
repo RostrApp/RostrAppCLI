@@ -1,33 +1,50 @@
-from App.models import Shift
-from App.database import db
-from datetime import datetime
-from App.controllers.user import get_user
-
 from App.models import Shift, Schedule
 from App.database import db
-from datetime import datetime
 from App.controllers.user import get_user
+from App.controllers.schedule import generate_report
 
-def create_schedule(admin_id, scheduleName): #Not sure why this was missing
+#create an empty schedule with start and end date
+def create_schedule(start_date, end_date, admin_id):
     admin = get_user(admin_id)
+    
+    if not admin or admin.role != "admin":
+        raise PermissionError("Only admins can create schedules")
+        
+    new_schedule = Schedule(start_date, end_date, admin_id)
+    
+    db.session.add(new_schedule)
+    db.session.commit()
+    return new_schedule
+
+#assign all staff to a weekly schedule using a scheduling strategy
+def schedule_week(strategy, schedule_id, staff_list, admin_id):
+    admin = get_user(admin_id)
+
     if not admin or admin.role != "admin":
         raise PermissionError("Only admins can create schedules")
 
-    new_schedule = Schedule(
-        created_by=admin_id,
-        name=scheduleName,
-        created_at=datetime.utcnow()
-    )
+    schedule = db.session.get(Schedule, schedule_id)
+    if not schedule:
+        raise ValueError("Invalid schedule ID")
 
-    db.session.add(new_schedule)
-    db.session.commit()
+    valid_staff = []
+    for staff_id in staff_list:
+        staff = get_user(staff_id)
+        if staff and staff.role == "staff":
+            valid_staff.append(staff)
+        else:
+            print(f"Skipping invalid staff ID: {staff_id}")
 
-    return new_schedule
+    if not valid_staff:
+        raise ValueError("No valid staff members to schedule")
 
-def schedule_shift(admin_id, staff_id, schedule_id, start_time, end_time):
+    strategy.fill_schedule(valid_staff, schedule)
+    
+
+#create a shift and add it to a schedule
+def schedule_shift(schedule_id, start_time, end_time, staff_id, admin_id):
     admin = get_user(admin_id)
     staff = get_user(staff_id)
-
     schedule = db.session.get(Schedule, schedule_id)
 
     if not admin or admin.role != "admin":
@@ -49,10 +66,14 @@ def schedule_shift(admin_id, staff_id, schedule_id, start_time, end_time):
 
     return new_shift
 
-
-def get_shift_report(admin_id):
+#view the shift report for a given schedule
+def view_report(schedule_id, admin_id):
     admin = get_user(admin_id)
     if not admin or admin.role != "admin":
         raise PermissionError("Only admins can view shift reports")
 
-    return [shift.get_json() for shift in Shift.query.order_by(Shift.start_time).all()]
+    schedule = db.session.get(Schedule, schedule_id)
+    if not schedule:
+        raise ValueError("Invalid schedule ID")
+
+    return generate_report(schedule_id)
