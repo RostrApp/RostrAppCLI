@@ -1,22 +1,24 @@
-# Task 9: EvenScheduler class implementation
-from App.models.scheduling_strategy import SchedulingStrategy
 from App.models.schedule import Schedule
+from App.models.scheduling_strategy import SchedulingStrategy
 
 class EvenScheduler(SchedulingStrategy):
 
-    def schedule_shift(self, staff_list, shift_list, creator_id):
-        schedule = Schedule(
-            name="Even Schedule",
-            created_by=creator_id
-        )
+    def schedule_shift(self, staff, shifts, admin_id):
+        """
+        Assign shifts evenly across staff.
+        Returns a Schedule object with shifts assigned.
+        """
 
-        staff_count = len(staff_list)
-        i = 0
+        # Compute schedule bounds
+        start_date = min(s.start_time for s in shifts)
+        end_date = max(s.end_time for s in shifts)
 
-        for shift in shift_list:
-            assigned_staff = staff_list[i % staff_count]
-            shift.staff_id = assigned_staff.id
+        # Create schedule with new constructor
+        schedule = Schedule(start_date=start_date, end_date=end_date, admin_id=admin_id)
+
+        # Assign staff in round-robin fashion
+        for i, shift in enumerate(shifts):
+            shift.staff_id = staff[i % len(staff)].id
             schedule.shifts.append(shift)
-            i += 1
 
         return schedule

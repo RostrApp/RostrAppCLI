@@ -1,15 +1,17 @@
 from abc import ABC, abstractmethod
-from App.controllers.user import get_all_users_by_role, get_all_shifts
 
 class SchedulingStrategy(ABC):
-    # hello
-    # gets updated list from db upon initialization
+    """
+    Abstract base class for scheduling strategies.
+    Concrete classes must implement schedule_shift(staff, shifts, admin_id).
+    """
+
     def __init__(self):
         super().__init__()
-        self.all_staff = get_all_users_by_role("staff")
-        self.shifts = get_all_shifts()
 
     @abstractmethod
-    def schedule_shift(self):
-        #return Schedule object in concrete classes
+    def schedule_shift(self, staff, shifts, admin_id):
+        """
+        Assign staff to shifts and return a Schedule object.
+        """
         pass

@@ -1,26 +1,28 @@
-# Task 9: DayNightScheduler class implementation
-from App.models.scheduling_strategy import SchedulingStrategy
+from datetime import datetime
 from App.models.schedule import Schedule
+from App.models.scheduling_strategy import SchedulingStrategy
 
 class DayNightScheduler(SchedulingStrategy):
 
-    def schedule_shift(self, staff_list, shift_list, creator_id):
-        schedule = Schedule(
-            name="Day Night Schedule",
-            created_by=creator_id
-        )
+    def schedule_shift(self, staff, shifts, admin_id):
+        """
+        Assigns day shifts to the first staff member and night shifts to the second.
+        Returns a Schedule object with shifts assigned.
+        """
 
-        if len(staff_list) < 2:
-            raise Exception("Need at least 2 staff for day/night scheduling")
+        # Compute overall schedule bounds
+        start_date = min(s.start_time for s in shifts)
+        end_date = max(s.end_time for s in shifts)
 
-        day_staff = staff_list[0]
-        night_staff = staff_list[1]
+        # Create the schedule with new constructor
+        schedule = Schedule(start_date=start_date, end_date=end_date, admin_id=admin_id)
 
-        for shift in shift_list:
-            if shift.start_time.hour < 18:
-                shift.staff_id = day_staff.id
-            else:
-                shift.staff_id = night_staff.id
+        # Simple assumption: staff[0] = day staff, staff[1] = night staff
+        for shift in shifts:
+            if shift.start_time.hour < 18:   # before 6pm = day
+                shift.staff_id = staff[0].id
+            else:                            # 6pm or later = night
+                shift.staff_id = staff[1].id
             schedule.shifts.append(shift)
 
         return schedule
