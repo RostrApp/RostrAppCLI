@@ -75,30 +75,41 @@ shift_cli = AppGroup('shift', help='Shift management commands')
 @click.argument("mode")  # "manual" or "strategy"
 @click.argument("args", nargs=-1)  # flexible args
 def schedule_shift_command(mode, args):
+    from datetime import datetime
+    from App.database import db
     from App.controllers.schedule import (
         create_even_schedule,
         create_minimum_schedule,
         create_day_night_schedule
     )
-    from App.controllers.user import get_all_users_by_role, get_all_shifts
+    from App.controllers.user import get_all_users_by_role, get_all_shifts, schedule_shift
+    from App.auth import require_admin_login
 
     admin = require_admin_login()
 
     if mode == "manual":
         if len(args) != 4:
-            print("❌ Usage: flask shift schedule manual <staff_id> <schedule_id> <start> <end>")
+            print("❌ Usage: flask shift schedule manual <staff_id> <schedule_id> <start_iso> <end_iso>")
             return
+
         staff_id, schedule_id, start, end = args
         start_time = datetime.fromisoformat(start)
         end_time = datetime.fromisoformat(end)
+
+        # schedule_shift is your controller for manual assignment
         shift = schedule_shift(admin.id, int(staff_id), int(schedule_id), start_time, end_time)
-        print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
+
+        db.session.add(shift)
+        db.session.commit()
+
+        print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}")
         print(shift.get_json())
 
     elif mode == "strategy":
         if len(args) != 1:
             print("❌ Usage: flask shift schedule strategy <even|min|daynight>")
             return
+
         strategy = args[0].lower()
         staff = get_all_users_by_role("staff")
         shifts = get_all_shifts()
@@ -115,7 +126,8 @@ def schedule_shift_command(mode, args):
 
         db.session.add(schedule)
         db.session.commit()
-        print(f"✅ Schedule created with {strategy} strategy:")
+
+        print(f"✅ Schedule created with {strategy} strategy by {admin.username}")
         print(schedule.get_json())
 
 
