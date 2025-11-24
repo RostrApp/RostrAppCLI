@@ -198,26 +198,29 @@ def require_staff_login():
         raise PermissionError(f"Invalid or expired token. Please login again. ({e})")
 
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
-
 @schedule_cli.command("create", help="Create a schedule")
 @click.argument("strategy", default="even")
 def create_schedule_command(strategy):
+    from App.database import db
     from App.controllers.schedule import (
         create_even_schedule,
         create_minimum_schedule,
         create_day_night_schedule
     )
     from App.controllers.user import get_all_users_by_role, get_all_shifts
+    from App.auth import require_admin_login
 
     admin = require_admin_login()
     all_staff = get_all_users_by_role("staff")
     shifts = get_all_shifts()
 
-    if strategy.lower() == "even":
+    strategy = strategy.lower()
+
+    if strategy == "even":
         schedule = create_even_schedule(all_staff, shifts, admin.id)
-    elif strategy.lower() == "minimum":
+    elif strategy == "minimum":
         schedule = create_minimum_schedule(all_staff, shifts, admin.id)
-    elif strategy.lower() == "daynight":
+    elif strategy == "daynight":
         schedule = create_day_night_schedule(all_staff, shifts, admin.id)
     else:
         print("❌ Invalid strategy. Use: even, minimum, or daynight")
@@ -225,8 +228,10 @@ def create_schedule_command(strategy):
 
     db.session.add(schedule)
     db.session.commit()
-    print(f"✅ Schedule created with {strategy} strategy:")
+
+    print(f"✅ Schedule created with {strategy} strategy by {admin.username}")
     print(schedule.get_json())
+
 
 @schedule_cli.command("list", help="List all schedules")
 def list_schedules_command():
