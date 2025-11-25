@@ -16,7 +16,6 @@ class Report(db.Model):
       }
 
     def __init__(self, admin_id, generated_date):
-       self.id = id
        self.admin_id = admin_id
        self.generated_date = generated_date
       
