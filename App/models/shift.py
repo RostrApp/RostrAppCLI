@@ -1,16 +1,30 @@
 from App.database import db
 from datetime import datetime
-from enum import Enum as PyEnum
-from sqlalchemy import Enum
+from enum import Enum
+
+class ShiftStatus(Enum):
+    SCHEDULED = "Scheduled"
+    ONGOING = "Ongoing"
+    COMPLETED = "Completed"
+    MISSED = "Missed"
+    LATE = "Late"
 
 class Shift(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    
+    start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
+    
     clock_in = db.Column(db.DateTime, nullable=True)
+    
     clock_out = db.Column(db.DateTime, nullable=True)
-    status = db.Column(db.String, default="Scheduled")
-
+    status = db.Column(
+        db.Enum(ShiftStatus),
+        default=ShiftStatus.SCHEDULED,
+        nullable=False
+    )
+    
     staff = db.relationship("Staff", backref="shifts", foreign_keys=[staff_id])
 
     @classmethod
@@ -23,7 +37,6 @@ class Shift(db.Model):
         
         self.staff = staff
         self.staff_id = staff.id
-        db.session.commit()
         
         
     def getHours(self):
@@ -45,32 +58,31 @@ class Shift(db.Model):
 
         # Completed -> has both clock-in and clock-out
         if self.clock_in and self.clock_out:
-            self.status = "Completed"
+            self.status = ShiftStatus.COMPLETED
 
         # Ongoing -> clocked in but not out yet
         elif self.clock_in and not self.clock_out:
-            self.status = "Ongoing"
-
+            self.status = ShiftStatus.ONGOING
+            
         # Late -> start_time passed, but staff hasn't clocked in, but clock-in still possible
         elif now > self.start_time and not self.clock_in and now < self.end_time:
-            self.status = "Late"
+            self.status = ShiftStatus.LATE
 
         # Missed -> end_time passed and no clock-in
         elif now > self.end_time and not self.clock_in:
-            self.status = "Missed"
+            self.status = ShiftStatus.MISSED
 
         # Scheduled -> future shift not yet started
         elif now < self.start_time:
-            self.status = "Scheduled"
-
-        db.session.commit()   
+            self.status = ShiftStatus.SCHEDULED 
         
         def get_json(self):
             return {
                 "id": self.id,
-                "schedule_id": self.schedule_id,
+                "staff_id": self.staff_id,
+                "start_time": self.start_time.isoformat(),
                 "end_time": self.end_time.isoformat(),
                 "clock_in": self.clock_in.isoformat() if self.clock_in else None,
                 "clock_out": self.clock_out.isoformat() if self.clock_out else None,
-                "status": self.status
-            }    
+                "status": self.status.value
+            } 
