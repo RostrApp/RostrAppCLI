@@ -318,50 +318,50 @@ def test_shift_update_status(self):
 
 # Report unit tests
 
-    def test_get_summary(self):
-        admin = create_user("admin_invalid_out", "adminpass", "admin")
-        db.session.add(admin)
-        db.session.commit()
-        
-        alice = Staff("Alice", "alicepass")
-        bob = Staff("Bob", "bobpass")
-        db.session.add_all([alice, bob])
-        db.session.commit()
+def test_get_summary(self):
+    admin = create_user("admin_invalid_out", "adminpass", "admin")
+    db.session.add(admin)
+    db.session.commit()
+    
+    alice = Staff("Alice", "alicepass")
+    bob = Staff("Bob", "bobpass")
+    db.session.add_all([alice, bob])
+    db.session.commit()
 
-        schedule = Schedule(datetime(2025, 11, 17, 8), datetime(2025, 11, 21, 16), admin.id)
-        db.session.add(schedule)
-        db.session.commit()
-        db.session.add(schedule)
-        db.session.commit()
+    schedule = Schedule(datetime(2025, 11, 17, 8), datetime(2025, 11, 21, 16), admin.id)
+    db.session.add(schedule)
+    db.session.commit()
+    db.session.add(schedule)
+    db.session.commit()
 
-        shift1 = Shift(staff_id=alice.id,
-                       schedule_id=schedule.id,
-                       start_time=datetime(2025, 11, 17, 8),
-                       end_time=datetime(2025, 11, 17, 16),
-                       clock_in=datetime(2025, 11, 17, 8, 5),
-                       clock_out=datetime(2025, 11, 17, 16))
+    shift1 = Shift(staff_id=alice.id,
+                    schedule_id=schedule.id,
+                    start_time=datetime(2025, 11, 17, 8),
+                    end_time=datetime(2025, 11, 17, 16),
+                    clock_in=datetime(2025, 11, 17, 8, 5),
+                    clock_out=datetime(2025, 11, 17, 16))
 
-        shift2 = Shift(staff_id=bob.id,
-                       schedule_id=schedule.id,
-                       start_time=datetime(2025, 11, 17, 8),
-                       end_time=datetime(2025, 11, 17, 16),
-                       clock_in=datetime(2025, 11, 17, 8, 0),
-                       clock_out=datetime(2025, 11, 17, 16))
+    shift2 = Shift(staff_id=bob.id,
+                    schedule_id=schedule.id,
+                    start_time=datetime(2025, 11, 17, 8),
+                    end_time=datetime(2025, 11, 17, 16),
+                    clock_in=datetime(2025, 11, 17, 8, 0),
+                    clock_out=datetime(2025, 11, 17, 16))
 
-        db.session.add_all([shift1, shift2])
-        db.session.commit()
+    db.session.add_all([shift1, shift2])
+    db.session.commit()
 
-        summary = get_summary(schedule.id)
+    summary = get_summary(schedule.id)
 
-        assert summary["schedule_id"] == schedule.id
-        assert "2025-11-17" in summary["days"]
+    assert summary["schedule_id"] == schedule.id
+    assert "2025-11-17" in summary["days"]
 
-        day_data = summary["days"]["2025-11-17"]
-        assert alice.username in day_data["assigned"]
-        assert bob.username in day_data["assigned"]
-        assert alice.username in day_data["late"]
-        assert bob.username not in day_data["late"]
-        assert len(day_data["missed"]) == 0
+    day_data = summary["days"]["2025-11-17"]
+    assert alice.username in day_data["assigned"]
+    assert bob.username in day_data["assigned"]
+    assert alice.username in day_data["late"]
+    assert bob.username not in day_data["late"]
+    assert len(day_data["missed"]) == 0
 '''
     Integration Tests
 '''
