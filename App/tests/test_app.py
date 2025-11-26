@@ -451,13 +451,23 @@ class UsersIntegrationTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             get_shift_report(staff.id)
 
+
 import unittest
 from datetime import datetime
 from App.database import db
 from App.models.user import User
 from App.models.shift import Shift
+from App.models.schedule import Schedule
+from App.services.strategies.even_scheduler import EvenScheduler
+from App.services.strategies.minimum_scheduler import MinimumScheduler
+from App.services.strategies.day_night_scheduler import DayNightScheduler
 
 class ScheduleUnitTests(unittest.TestCase):
+
+    def setUp(self):
+        # Clear DB before each test
+        db.drop_all()
+        db.create_all()
 
     def test_even_scheduler_assigns_equally(self):
         staff = [
@@ -467,14 +477,18 @@ class ScheduleUnitTests(unittest.TestCase):
         db.session.add_all(staff)
         db.session.commit()
 
-        # Create shifts in memory only
-        shifts = [
+        schedule = Schedule(
+            start_date=datetime(2025,11,21),
+            end_date=datetime(2025,11,22),
+            admin_id=1
+        )
+        schedule.shifts = [
             Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),
             Shift(start_time=datetime(2025,11,21,12), end_time=datetime(2025,11,21,16))
         ]
 
         scheduler = EvenScheduler()
-        schedule = scheduler.schedule_shift(staff, shifts, admin_id=1)
+        scheduler.fill_schedule(staff, schedule)
 
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)
         self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)
@@ -487,13 +501,18 @@ class ScheduleUnitTests(unittest.TestCase):
         db.session.add_all(staff)
         db.session.commit()
 
-        shifts = [
+        schedule = Schedule(
+            start_date=datetime(2025,11,21),
+            end_date=datetime(2025,11,22),
+            admin_id=1
+        )
+        schedule.shifts = [
             Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),
             Shift(start_time=datetime(2025,11,21,12), end_time=datetime(2025,11,21,16))
         ]
 
         scheduler = MinimumScheduler()
-        schedule = scheduler.schedule_shift(staff, shifts, admin_id=1)
+        scheduler.fill_schedule(staff, schedule)
 
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)
         self.assertEqual(schedule.shifts[1].staff_id, staff[0].id)
@@ -506,13 +525,18 @@ class ScheduleUnitTests(unittest.TestCase):
         db.session.add_all(staff)
         db.session.commit()
 
-        shifts = [
+        schedule = Schedule(
+            start_date=datetime(2025,11,21),
+            end_date=datetime(2025,11,22),
+            admin_id=1
+        )
+        schedule.shifts = [
             Shift(start_time=datetime(2025,11,21,8), end_time=datetime(2025,11,21,12)),   # Day
             Shift(start_time=datetime(2025,11,21,20), end_time=datetime(2025,11,21,23))  # Night
         ]
 
         scheduler = DayNightScheduler()
-        schedule = scheduler.schedule_shift(staff, shifts, admin_id=1)
+        scheduler.fill_schedule(staff, schedule)
 
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)  # Day staff
         self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)  # Night staff
