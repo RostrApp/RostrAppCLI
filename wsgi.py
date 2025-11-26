@@ -2,6 +2,7 @@ import click, pytest, sys, os
 from flask.cli import with_appcontext, AppGroup
 from datetime import datetime
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from datetime import datetime
 
 from App.database import db, get_migrate
 from App.models import User
@@ -69,20 +70,6 @@ app.cli.add_command(user_cli)
 
 
 shift_cli = AppGroup('shift', help='Shift management commands')
-
-@shift_cli.command("schedule", help="Admin schedules a shift and assigns it to a schedule")
-@click.argument("staff_id", type=int)
-@click.argument("schedule_id", type=int)
-@click.argument("start")
-@click.argument("end")
-def schedule_shift_command(staff_id, schedule_id, start, end):
-    from datetime import datetime
-    admin = require_admin_login()
-    start_time = datetime.fromisoformat(start)
-    end_time = datetime.fromisoformat(end)
-    shift = schedule_shift(admin.id, staff_id, schedule_id, start_time, end_time)
-    print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
-    print(shift.get_json())
 
 
 
@@ -166,16 +153,51 @@ def require_staff_login():
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
 
 @schedule_cli.command("create", help="Create a schedule")
-@click.argument("name")
-def create_schedule_command(name):
-    from App.models import Schedule
+@click.argument("strategy", default="even")
+@click.argument("start_date")
+@click.argument("end_date")
+def create_schedule_command(strategy, start_date, end_date):
+    from datetime import datetime
+    from App.database import db
+    from App.models.schedule import Schedule
+    from App.controllers.user import get_all_users_by_role
+    from App.auth import require_admin_login
+    from App.services.strategies.even_scheduler import EvenScheduler
+    from App.services.strategies.minimum_scheduler import MinimumScheduler
+    from App.services.strategies.daynight_scheduler import DayNightScheduler
+
     admin = require_admin_login()
-    schedule = Schedule(name=name, created_by=admin.id)
+    staff_list = get_all_users_by_role("staff")
+
+    # create empty schedule
+    schedule = Schedule(
+        start_date=datetime.fromisoformat(start_date),
+        end_date=datetime.fromisoformat(end_date),
+        admin_id=admin.id
+    )
+
+    # pick strategy
+    strategy = strategy.lower()
+    if strategy == "even":
+        scheduler = EvenScheduler()
+    elif strategy == "minimum":
+        scheduler = MinimumScheduler()
+    elif strategy == "daynight":
+        scheduler = DayNightScheduler()
+    else:
+        print("❌ Invalid strategy. Use: even, minimum, or daynight")
+        return
+
+    # fill schedule using chosen strategy
+    scheduler.fill_schedule(staff_list, schedule)
+
     db.session.add(schedule)
     db.session.commit()
-    print(f"✅ Schedule created: {schedule.get_json()}")
 
+    print(f"✅ Schedule created with {strategy} strategy by {admin.username}")
+    print(schedule.get_json())
 
+    
 @schedule_cli.command("list", help="List all schedules")
 def list_schedules_command():
     from App.models import Schedule
