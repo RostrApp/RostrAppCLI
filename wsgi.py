@@ -71,53 +71,6 @@ app.cli.add_command(user_cli)
 
 shift_cli = AppGroup('shift', help='Shift management commands')
 
-@shift_cli.command("schedule", help="Admin schedules a shift or uses a strategy")
-@click.argument("mode")  # "manual" or "strategy"
-@click.argument("args", nargs=-1)  # flexible args
-def schedule_shift_command(mode, args):
-    from App.controllers.schedule import (
-        create_even_schedule,
-        create_minimum_schedule,
-        create_day_night_schedule
-    )
-    from App.controllers.user import get_all_users_by_role, get_all_shifts
-
-    admin = require_admin_login()
-
-    if mode == "manual":
-        if len(args) != 4:
-            print("❌ Usage: flask shift schedule manual <staff_id> <schedule_id> <start> <end>")
-            return
-        staff_id, schedule_id, start, end = args
-        start_time = datetime.fromisoformat(start)
-        end_time = datetime.fromisoformat(end)
-        shift = schedule_shift(admin.id, int(staff_id), int(schedule_id), start_time, end_time)
-        print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
-        print(shift.get_json())
-
-    elif mode == "strategy":
-        if len(args) != 1:
-            print("❌ Usage: flask shift schedule strategy <even|min|daynight>")
-            return
-        strategy = args[0].lower()
-        staff = get_all_users_by_role("staff")
-        shifts = get_all_shifts()
-
-        if strategy == "even":
-            schedule = create_even_schedule(staff, shifts, admin.id)
-        elif strategy == "minimum":
-            schedule = create_minimum_schedule(staff, shifts, admin.id)
-        elif strategy == "daynight":
-            schedule = create_day_night_schedule(staff, shifts, admin.id)
-        else:
-            print("❌ Invalid strategy. Use: even, minimum, daynight")
-            return
-
-        db.session.add(schedule)
-        db.session.commit()
-        print(f"✅ Schedule created with {strategy} strategy:")
-        print(schedule.get_json())
-
 
 
 @shift_cli.command("roster", help="Staff views combined roster")
@@ -198,33 +151,45 @@ def require_staff_login():
         raise PermissionError(f"Invalid or expired token. Please login again. ({e})")
 
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
+
 @schedule_cli.command("create", help="Create a schedule")
 @click.argument("strategy", default="even")
-def create_schedule_command(strategy):
+@click.argument("start_date")
+@click.argument("end_date")
+def create_schedule_command(strategy, start_date, end_date):
+    from datetime import datetime
     from App.database import db
-    from App.controllers.schedule import (
-        create_even_schedule,
-        create_minimum_schedule,
-        create_day_night_schedule
-    )
-    from App.controllers.user import get_all_users_by_role, get_all_shifts
+    from App.models.schedule import Schedule
+    from App.controllers.user import get_all_users_by_role
     from App.auth import require_admin_login
+    from App.services.strategies.even_scheduler import EvenScheduler
+    from App.services.strategies.minimum_scheduler import MinimumScheduler
+    from App.services.strategies.daynight_scheduler import DayNightScheduler
 
     admin = require_admin_login()
-    all_staff = get_all_users_by_role("staff")
-    shifts = get_all_shifts()
+    staff_list = get_all_users_by_role("staff")
 
+    # create empty schedule
+    schedule = Schedule(
+        start_date=datetime.fromisoformat(start_date),
+        end_date=datetime.fromisoformat(end_date),
+        admin_id=admin.id
+    )
+
+    # pick strategy
     strategy = strategy.lower()
-
     if strategy == "even":
-        schedule = create_even_schedule(all_staff, shifts, admin.id)
+        scheduler = EvenScheduler()
     elif strategy == "minimum":
-        schedule = create_minimum_schedule(all_staff, shifts, admin.id)
+        scheduler = MinimumScheduler()
     elif strategy == "daynight":
-        schedule = create_day_night_schedule(all_staff, shifts, admin.id)
+        scheduler = DayNightScheduler()
     else:
         print("❌ Invalid strategy. Use: even, minimum, or daynight")
         return
+
+    # fill schedule using chosen strategy
+    scheduler.fill_schedule(staff_list, schedule)
 
     db.session.add(schedule)
     db.session.commit()
@@ -232,7 +197,7 @@ def create_schedule_command(strategy):
     print(f"✅ Schedule created with {strategy} strategy by {admin.username}")
     print(schedule.get_json())
 
-
+    
 @schedule_cli.command("list", help="List all schedules")
 def list_schedules_command():
     from App.models import Schedule
