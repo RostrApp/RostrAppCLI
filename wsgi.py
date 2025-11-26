@@ -93,7 +93,7 @@ def schedule_shift_command(mode, args):
     from App.auth import require_admin_login
     from App.services.strategies.even_scheduler import EvenScheduler
     from App.services.strategies.minimum_scheduler import MinimumScheduler
-    from App.services.strategies.daynight_scheduler import DayNightScheduler
+    from App.services.strategies.day_night_scheduler import DayNightScheduler
 
     admin = require_admin_login()
 
