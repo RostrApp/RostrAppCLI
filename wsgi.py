@@ -85,6 +85,15 @@ shift_cli = AppGroup('shift', help='Shift management commands')
 @click.argument("mode")  # "manual" or "strategy"
 @click.argument("args", nargs=-1)  # flexible args
 def schedule_shift_command(mode, args):
+    from datetime import datetime
+    from App.database import db
+    from App.models.schedule import Schedule
+    from App.models.shift import Shift
+    from App.controllers.user import get_all_users_by_role, schedule_shift
+    from App.auth import require_admin_login
+    from App.services.strategies.even_scheduler import EvenScheduler
+    from App.services.strategies.minimum_scheduler import MinimumScheduler
+    from App.services.strategies.daynight_scheduler import DayNightScheduler
 
     admin = require_admin_login()
 
@@ -141,6 +150,7 @@ def schedule_shift_command(mode, args):
 
         print(f"✅ Schedule created with {strategy_name} strategy by {admin.username}")
         print(schedule.get_json())
+
 
 @shift_cli.command("roster", help="Staff views combined roster")
 def roster_command():
@@ -220,16 +230,6 @@ def require_staff_login():
         raise PermissionError(f"Invalid or expired token. Please login again. ({e})")
 
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
-
-@schedule_cli.command("create", help="Create a schedule")
-@click.argument("name")
-def create_schedule_command(name):
-    from App.models import Schedule
-    admin = require_admin_login()
-    schedule = Schedule(name=name, created_by=admin.id)
-    db.session.add(schedule)
-    db.session.commit()
-    print(f"✅ Schedule created: {schedule.get_json()}")
 
 
 @schedule_cli.command("list", help="List all schedules")
