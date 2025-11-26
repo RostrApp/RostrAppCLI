@@ -31,3 +31,4 @@ class Schedule(db.Model):
     def remove_shift(self, shift):
         shift.schedule = None
         return self
+    
