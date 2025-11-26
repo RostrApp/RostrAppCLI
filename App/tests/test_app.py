@@ -451,7 +451,6 @@ class UsersIntegrationTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             get_shift_report(staff.id)
 
-
 import unittest
 from datetime import datetime
 from App.database import db
@@ -460,7 +459,7 @@ from App.models.shift import Shift
 from App.models.schedule import Schedule
 from App.services.strategies.even_scheduler import EvenScheduler
 from App.services.strategies.minimum_scheduler import MinimumScheduler
-from App.services.strategies.day_night_scheduler import DayNightScheduler
+from App.services.strategies.daynight_scheduler import DayNightScheduler
 
 class ScheduleUnitTests(unittest.TestCase):
 
