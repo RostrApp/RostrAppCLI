@@ -247,6 +247,75 @@ class UserUnitTests(unittest.TestCase):
         assert str(e.value) == "Invalid shift for staff"
 
 
+#Shift unit tests
+def test_shift_assign_staff(self):
+        staff = create_user("assignstaff", "pass", "staff")
+        schedule = Schedule(name="AssignTest", created_by=staff.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        shift = Shift(
+            staff_id=None,
+            schedule_id=schedule.id,
+            start_time=datetime.now(),
+            end_time=datetime.now() + timedelta(hours=4)
+        )
+        db.session.add(shift)
+        db.session.commit()
+
+        shift.assignStaff(staff)
+        self.assertEqual(shift.staff_id, staff.id)
+
+def test_shift_get_hours(self):
+        staff = create_user("hourstaff", "pass", "staff")
+
+        start = datetime.now()
+        end = start + timedelta(hours=5)
+
+        shift = Shift(
+            staff_id=staff.id,
+            schedule_id=None,
+            start_time=start,
+            end_time=end,
+            clock_in=start,
+            clock_out=end
+        )
+        db.session.add(shift)
+        db.session.commit()
+
+        self.assertEqual(shift.getHours(), 5.0)
+        
+def test_shift_update_status(self):
+        staff = create_user("statusstaff", "pass", "staff")
+        start = datetime.now() - timedelta(hours=1)
+        end = datetime.now() + timedelta(hours=1)
+
+        shift = Shift(
+            staff_id=staff.id,
+            schedule_id=None,
+            start_time=start,
+            end_time=end,
+            clock_in=None,
+            clock_out=None
+        )
+        db.session.add(shift)
+        db.session.commit()
+
+        # Late because start passed but no clock-in yet
+        shift.updateStatus()
+        self.assertEqual(shift.status, "Late")
+
+        # Ongoing after clock-in
+        shift.clock_in = datetime.now()
+        shift.updateStatus()
+        self.assertEqual(shift.status, "Ongoing")
+
+        # Completed after clock-out
+        shift.clock_out = datetime.now()
+        shift.updateStatus()
+        self.assertEqual(shift.status, "Completed")
+
+
 # Report unit tests
 
     def test_get_summary(self):
