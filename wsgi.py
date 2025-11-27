@@ -98,9 +98,15 @@ def roster_command():
 @click.argument("shift_id", type=int)
 def clockin_command(shift_id):
     staff = require_staff_login()
-    shift = clock_in(staff.id, shift_id)
-    print(f"🕒 {staff.username} clocked in: {shift.get_json()}")
-
+    try:
+        shift = clock_in(staff.id, shift_id)
+        print(f"🕒 {staff.username} clocked in: {shift.get_json()}")
+    except PermissionError as e:
+        print(f"❌ Permission denied: {e}")
+    except ValueError as e:
+        print(f"❌ Error: {e}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
 
 
 @shift_cli.command("clockout", help="Staff clocks out")
