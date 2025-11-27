@@ -128,6 +128,26 @@ def report_command():
 
 app.cli.add_command(shift_cli)
 
+@shift_cli.command("view", help="Staff views their shifts for a schedule")
+@click.argument("schedule_id", type=int)
+def view_shifts_command(schedule_id):
+    staff = require_staff_login()
+    from App.controllers import viewShifts
+
+    shifts = viewShifts(staff.id, schedule_id)
+    print(f"📋 Shifts for {staff.username} in Schedule {schedule_id}:")
+    
+    if not shifts:
+        print("No shifts found.")
+        return
+    
+    for s in shifts:
+        print(f"- Shift ID {s['id']}")
+        print(f"  Start Time: {s['start_time']}")
+        print(f"  End Time: {s['end_time']}")
+        print(f"  Clock In: {s['clock_in']}")
+        print(f"  Clock Out: {s['clock_out']}")
+        print("")
 
 def require_admin_login():
     import os
