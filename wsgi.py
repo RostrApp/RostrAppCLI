@@ -87,10 +87,12 @@ def schedule_shift_command(staff_id, schedule_id, start, end):
 
 
 @shift_cli.command("roster", help="Staff views combined roster")
-def roster_command():
+def roster_command(schedule_id):
     staff = require_staff_login()
-    roster = get_combined_roster(staff.id)
-    print(f"📋 Roster for {staff.username}:")
+    from App.controllers import viewSchedule
+
+    roster = viewSchedule(staff.id, schedule_id)
+    print(f"📋 Roster for Schedule {schedule_id}:")
     print(roster)
 
 
