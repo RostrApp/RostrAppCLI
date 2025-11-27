@@ -7,7 +7,7 @@ class ShiftStatus(PyEnum):
     SCH = "scheduled"
     COM = "completed"
     MIS = "missed"
-    CAN = "cancelled"
+    LAT = "late"
     ONG = "ongoing"
 
 class Shift(db.Model):
