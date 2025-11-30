@@ -1,11 +1,24 @@
-from App.models.staff import Staff
-from App.models.schedule import Schedule
-from App.controllers.user import get_all_users_by_role, get_all_shifts
-from App.services.scheduling_strategy import SchedulingStrategy 
+from App.services.scheduling_strategy import SchedulingStrategy
+from App.models.shift import Shift
+from datetime import timedelta
 
 class MinimumScheduler(SchedulingStrategy):
+    def fill_schedule(self, staff_list, schedule):
+        """
+        Generate shifts between schedule.start_date and schedule.end_date,
+        assign all shifts to the first staff member, and append them to the schedule.
+        """
 
-    def fill_schedule(self, staff, schedule):
-        # return Schedule object -> create_minimum_schedule(self.all_staff, self.shifts)
-        # this method will be in Schedule controller
-        pass
+        current_day = schedule.start_date
+        end_day = schedule.end_date
+
+        while current_day <= end_day:
+            # Example: one shift per day, 9am–5pm
+            shift = Shift(
+                start_time=current_day.replace(hour=9, minute=0),
+                end_time=current_day.replace(hour=17, minute=0),
+                staff_id=staff_list[0].id,
+                schedule_id=schedule.id
+            )
+            schedule.shifts.append(shift)
+            current_day += timedelta(days=1)
