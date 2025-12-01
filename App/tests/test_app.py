@@ -170,7 +170,7 @@ class UserUnitTests(unittest.TestCase):
         # Import the controller AFTER creating data
         from App.controllers.staff import viewShifts
         
-        result = viewShifts(staff.id)
+        result = viewShifts(staff.id, schedule.id)
 
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["staff_id"], staff.id)
@@ -181,6 +181,45 @@ class UserUnitTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             from App.controllers.staff import viewShifts
             viewShifts(admin.id, 1)    
+            
+    def test_clock_in_prevent_double_clock_in(self):
+        admin = create_user("admin_double", "adminpass", "admin")
+        staff = create_user("staff_double", "staffpass", "staff")
+
+        schedule = Schedule(name="DoubleClock", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+
+        # First clock-in succeeds
+        clock_in(staff.id, shift.id)
+
+        # Second one must raise
+        with pytest.raises(ValueError) as e:
+            clock_in(staff.id, shift.id)
+
+        assert "already clocked in" in str(e.value).lower()
+
+    def test_clock_out_requires_clock_in_first(self):
+        admin = create_user("admin_noin", "adminpass", "admin")
+        staff = create_user("staff_noin", "staffpass", "staff")
+
+        schedule = Schedule(name="NoClockIn", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+
+        # Attempt to clock out without clocking in
+        with pytest.raises(ValueError) as e:
+            clock_out(staff.id, shift.id)
+
+        assert "must clock in first" in str(e.value).lower()
 
 
     def test_clock_in_valid(self):
