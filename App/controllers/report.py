@@ -13,24 +13,28 @@ def get_summary(scheduleID):
 
         if day not in days:
             days[day] = {
-                "assigned": set(),
-                "present": set(),
+                "scheduled": set(),
+                "completed": set(),
                 "late": set(),
                 "missed": set(),
+                "ongoing": set(),
             }
 
         staff = shift.staff
+        days[day]["scheduled"].add(staff.username)
 
-        # Add assigned staff
-        days[day]["assigned"].add(staff.username)
-
-        # Record staff's attendance
-        if shift.clock_in:
-            days[day]["present"].add(staff.username)
-            if shift.clock_in > shift.start_time:
-                days[day]["late"].add(staff.username)
-        else:
+        status = shift.status
+        
+        if status == ShiftStatus.SCH:
+            days[day]["scheduled"].add(staff.username)
+        elif status == ShiftStatus.COM:
+            days[day]["completed"].add(staff.username)
+        elif status == ShiftStatus.LAT:
+            days[day]["late"].add(staff.username)
+        elif status == ShiftStatus.MIS:
             days[day]["missed"].add(staff.username)
+        elif status == ShiftStatus.ONG:
+            days[day]["ongoing"].add(staff.username)
 
     # Convert sets to lists
     for day, record in days.items():
