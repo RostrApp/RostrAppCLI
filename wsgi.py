@@ -2,13 +2,14 @@ import click, pytest, sys, os
 from flask.cli import with_appcontext, AppGroup
 from datetime import datetime
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from datetime import datetime
 
 from App.database import db, get_migrate
 from App.models import User
 from App.main import create_app 
 from App.controllers import (
     create_user, get_all_users_json, get_all_users, initialize,
-    schedule_shift, get_combined_roster, clock_in, clock_out, get_shift_report, login,loginCLI
+    schedule_shift, get_combined_roster, clock_in, clock_out, view_report, login,loginCLI
 )
 
 app = create_app()
@@ -70,19 +71,52 @@ app.cli.add_command(user_cli)
 
 shift_cli = AppGroup('shift', help='Shift management commands')
 
-@shift_cli.command("schedule", help="Admin schedules a shift and assigns it to a schedule")
-@click.argument("staff_id", type=int)
-@click.argument("schedule_id", type=int)
-@click.argument("start")
-@click.argument("end")
-def schedule_shift_command(staff_id, schedule_id, start, end):
-    from datetime import datetime
+@shift_cli.command("schedule", help="Admin schedules a shift or uses a strategy")
+@click.argument("mode")  # "manual" or "strategy"
+@click.argument("args", nargs=-1)  # flexible args
+def schedule_shift_command(mode, args):
+    from App.controllers.schedule import (
+        create_even_schedule,
+        create_minimum_schedule,
+        create_day_night_schedule
+    )
+    from App.controllers.user import get_all_users_by_role, get_all_shifts
+
     admin = require_admin_login()
-    start_time = datetime.fromisoformat(start)
-    end_time = datetime.fromisoformat(end)
-    shift = schedule_shift(admin.id, staff_id, schedule_id, start_time, end_time)
-    print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
-    print(shift.get_json())
+
+    if mode == "manual":
+        if len(args) != 4:
+            print("❌ Usage: flask shift schedule manual <staff_id> <schedule_id> <start> <end>")
+            return
+        staff_id, schedule_id, start, end = args
+        start_time = datetime.fromisoformat(start)
+        end_time = datetime.fromisoformat(end)
+        shift = schedule_shift(admin.id, int(staff_id), int(schedule_id), start_time, end_time)
+        print(f"✅ Shift scheduled under Schedule {schedule_id} by {admin.username}:")
+        print(shift.get_json())
+
+    elif mode == "strategy":
+        if len(args) != 1:
+            print("❌ Usage: flask shift schedule strategy <even|min|daynight>")
+            return
+        strategy = args[0].lower()
+        staff = get_all_users_by_role("staff")
+        shifts = get_all_shifts()
+
+        if strategy == "even":
+            schedule = create_even_schedule(staff, shifts, admin.id)
+        elif strategy == "minimum":
+            schedule = create_minimum_schedule(staff, shifts, admin.id)
+        elif strategy == "daynight":
+            schedule = create_day_night_schedule(staff, shifts, admin.id)
+        else:
+            print("❌ Invalid strategy. Use: even, minimum, daynight")
+            return
+
+        db.session.add(schedule)
+        db.session.commit()
+        print(f"✅ Schedule created with {strategy} strategy:")
+        print(schedule.get_json())
 
 app.cli.add_command(shift_cli)
 
@@ -101,17 +135,26 @@ app.cli.add_command(shift_cli)
 @click.argument("shift_id", type=int)
 def clockin_command(shift_id):
     staff = require_staff_login()
-    shift = clock_in(staff.id, shift_id)
-    print(f"🕒 {staff.username} clocked in: {shift.get_json()}")
-
+    try:
+        shift = clock_in(staff.id, shift_id)
+        print(f"🕒 {staff.username} clocked in: {shift.get_json()}")
+    except PermissionError as e:
+        print(f"❌ Permission denied: {e}")
+    except ValueError as e:
+        print(f"❌ Error: {e}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
 
 
 @shift_cli.command("clockout", help="Staff clocks out")
 @click.argument("shift_id", type=int)
 def clockout_command(shift_id):
     staff = require_staff_login()
-    shift = clock_out(staff.id, shift_id)
-    print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    try:
+        shift = clock_out(staff.id, shift_id)
+        print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
 
 
 app.cli.add_command(shift_cli)
@@ -148,12 +191,17 @@ def assign_shift_command(shift_id, staff_id):
 app.cli.add_command(schedule_cli)
 
 
-@shift_cli.command("report", help="Admin views shift report")
-def report_command():
+@shift_cli.command("report", help="Admin views shift report summary")
+@click.argument("schedule_id", type=int)
+def report_command(scheduleID):
     admin = require_admin_login()
-    report = get_shift_report(admin.id)
-    print(f"📊 Shift report for {admin.username}:")
-    print(report)
+    try:
+        report = view_report(scheduleID, admin.id)
+        print(f"📊 Shift report summary:")
+        print(report)
+    except Exception as e:
+        print(f"❌ Report could not be viewed: {e}")
+    
 
 app.cli.add_command(shift_cli)
 
@@ -227,15 +275,33 @@ def require_staff_login():
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
 
 @schedule_cli.command("create", help="Create a schedule")
-@click.argument("name")
-def create_schedule_command(name):
-    from App.models import Schedule
+@click.argument("strategy", default="even")
+def create_schedule_command(strategy):
+    from App.controllers.schedule import (
+        create_even_schedule,
+        create_minimum_schedule,
+        create_day_night_schedule
+    )
+    from App.controllers.user import get_all_users_by_role, get_all_shifts
+
     admin = require_admin_login()
-    schedule = Schedule(name=name, created_by=admin.id)
+    all_staff = get_all_users_by_role("staff")
+    shifts = get_all_shifts()
+
+    if strategy.lower() == "even":
+        schedule = create_even_schedule(all_staff, shifts, admin.id)
+    elif strategy.lower() == "minimum":
+        schedule = create_minimum_schedule(all_staff, shifts, admin.id)
+    elif strategy.lower() == "daynight":
+        schedule = create_day_night_schedule(all_staff, shifts, admin.id)
+    else:
+        print("❌ Invalid strategy. Use: even, minimum, or daynight")
+        return
+
     db.session.add(schedule)
     db.session.commit()
-    print(f"✅ Schedule created: {schedule.get_json()}")
-
+    print(f"✅ Schedule created with {strategy} strategy:")
+    print(schedule.get_json())
 
 @schedule_cli.command("list", help="List all schedules")
 def list_schedules_command():

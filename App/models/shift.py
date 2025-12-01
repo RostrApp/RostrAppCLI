@@ -9,6 +9,13 @@ class ShiftStatus(Enum):
     MISSED = "Missed"
     LATE = "Late"
 
+class ShiftStatus(PyEnum):
+    SCH = "scheduled"
+    COM = "completed"
+    MIS = "missed"
+    LAT = "late"
+    ONG = "ongoing"
+
 class Shift(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
