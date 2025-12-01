@@ -307,7 +307,7 @@ def require_staff_login():
 
 schedule_cli = AppGroup('schedule', help='Schedule management commands')
 
-
+    
 @schedule_cli.command("list", help="List all schedules")
 def list_schedules_command():
     from App.models import Schedule
