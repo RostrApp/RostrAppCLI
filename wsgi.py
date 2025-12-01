@@ -9,7 +9,7 @@ from App.models import User
 from App.main import create_app 
 from App.controllers import (
     create_user, get_all_users_json, get_all_users, initialize,
-    schedule_shift, get_combined_roster, clock_in, clock_out, get_shift_report, login,loginCLI
+    schedule_shift, get_combined_roster, clock_in, clock_out, view_report, login,loginCLI
 )
 from App.models.schedule import Schedule
 from App.models.shift import Shift
@@ -151,6 +151,7 @@ def schedule_shift_command(mode, args):
         print(f"✅ Schedule created with {strategy_name} strategy by {admin.username}")
         print(schedule.get_json())
 
+app.cli.add_command(shift_cli)
 
 @shift_cli.command("roster", help="Staff views combined roster")
 def roster_command(schedule_id):
@@ -161,6 +162,7 @@ def roster_command(schedule_id):
     print(f"📋 Roster for Schedule {schedule_id}:")
     print(roster)
 
+app.cli.add_command(shift_cli)
 
 @shift_cli.command("clockin", help="Staff clocks in")
 @click.argument("shift_id", type=int)
@@ -181,18 +183,62 @@ def clockin_command(shift_id):
 @click.argument("shift_id", type=int)
 def clockout_command(shift_id):
     staff = require_staff_login()
-    shift = clock_out(staff.id, shift_id)
-    print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    try:
+        shift = clock_out(staff.id, shift_id)
+        print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
 
-
-@shift_cli.command("report", help="Admin views shift report")
-def report_command():
-    admin = require_admin_login()
-    report = get_shift_report(admin.id)
-    print(f"📊 Shift report for {admin.username}:")
-    print(report)
 
 app.cli.add_command(shift_cli)
+
+schedule_cli = AppGroup('schedule', help='Schedule management commands')
+
+@schedule_cli.command("assign", help="Admin assigns staff member to an existing shift")
+@click.argument("shift_id", type=int)
+@click.argument("staff_id", type=int)
+def assign_shift_command(shift_id, staff_id):
+    from App.models.shift import Shift
+    from App.controllers import get_user
+    admin = require_admin_login()
+    
+    shift = Shift.get_shift(shift_id)
+    
+    if not shift:
+        print(f"❌ Shift {shift_id} not found.")
+        return
+    
+    staff = get_user(staff_id)
+    if not staff or staff.role.lower() != "staff":
+        print(f"❌ User {staff_id} is not a staff member.")
+        return
+    
+    try:
+        shift.assignStaff(staff)
+        shift.updateStatus()  
+        db.session.commit()
+        print(f"✅ {staff.username} assigned to shift {shift.id} by {admin.username}.")
+    except Exception as e:
+        print(f"❌ Assignment failed: {e}")
+        
+app.cli.add_command(schedule_cli)
+
+
+@shift_cli.command("report", help="Admin views shift report summary")
+@click.argument("schedule_id", type=int)
+def report_command(scheduleID):
+    admin = require_admin_login()
+    try:
+        report = view_report(scheduleID, admin.id)
+        print(f"📊 Shift report summary:")
+        print(report)
+    except Exception as e:
+        print(f"❌ Report could not be viewed: {e}")
+    
+
+app.cli.add_command(shift_cli)
+
+shift_cli = AppGroup('shift', help='Shift management commands')
 
 @shift_cli.command("view", help="Staff views their shifts for a schedule")
 @click.argument("schedule_id", type=int)
@@ -214,6 +260,8 @@ def view_shifts_command(schedule_id):
         print(f"  Clock In: {s['clock_in']}")
         print(f"  Clock Out: {s['clock_out']}")
         print("")
+        
+app.cli.add_command(shift_cli)
 
 def require_admin_login():
     import os
