@@ -1,4 +1,5 @@
 from App.models.schedule import Schedule
+from App.models.shift import ShiftStatus
 
 
 # This controller summarises the attendance of staff for a given schedule
