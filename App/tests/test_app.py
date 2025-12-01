@@ -553,3 +553,39 @@ class ScheduleUnitTests(unittest.TestCase):
         self.assertEqual(schedule.shifts[0].staff_id, staff[0].id)  # Day staff
         self.assertEqual(schedule.shifts[1].staff_id, staff[1].id)  # Night staff
 
+
+class ScheduleIntegrationTests(unittest.TestCase):
+
+    def test_full_schedule_creation_and_assignment(self):
+        admin = User(username="admin", password="adminpass", role="admin")
+        staff = [
+            User(username="anna", password="pass", role="staff"),
+            User(username="ben", password="pass", role="staff")
+        ]
+        db.session.add(admin)
+        db.session.add_all(staff)
+        db.session.commit()
+
+        schedule = Schedule(
+            start_date=datetime(2025,11,25),
+            end_date=datetime(2025,11,26),
+            admin_id=admin.id
+        )
+        schedule.shifts = [
+            Shift(start_time=datetime(2025,11,25,8), end_time=datetime(2025,11,25,12)),
+            Shift(start_time=datetime(2025,11,25,12), end_time=datetime(2025,11,25,16)),
+            Shift(start_time=datetime(2025,11,26,8), end_time=datetime(2025,11,26,12)),
+            Shift(start_time=datetime(2025,11,26,12), end_time=datetime(2025,11,26,16))
+        ]
+
+        scheduler = EvenScheduler()
+        scheduler.fill_schedule(staff, schedule)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        retrieved_schedule = db.session.get(Schedule, schedule.id)
+        self.assertEqual(len(retrieved_schedule.shifts), 4)
+        assigned_staff_ids = [shift.staff_id for shift in retrieved_schedule.shifts]
+        self.assertIn(staff[0].id, assigned_staff_ids)
+        self.assertIn(staff[1].id, assigned_staff_ids)
