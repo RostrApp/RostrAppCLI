@@ -116,8 +116,11 @@ def clockin_command(shift_id):
 @click.argument("shift_id", type=int)
 def clockout_command(shift_id):
     staff = require_staff_login()
-    shift = clock_out(staff.id, shift_id)
-    print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    try:
+        shift = clock_out(staff.id, shift_id)
+        print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
 
 
 app.cli.add_command(shift_cli)
