@@ -57,14 +57,14 @@ class UserUnitTests(unittest.TestCase):
         password = "mypass"
         user = User(username="tester", password=password)
         assert user.password != password
-        assert user.check_password(password) is True
+        assert user.check_password(password) == True
 
     def test_check_password(self):
         password = "mypass"
         user = User("bob", password)
-        assert user.check_password(password)
-# Admin unit tests
-
+        assert user.check_password(password) == True
+    
+    # Admin unit tests
     def test_schedule_shift_valid(self):
         admin = create_user("admin1", "adminpass", "admin")
         staff = create_user("staff1", "staffpass", "staff")
