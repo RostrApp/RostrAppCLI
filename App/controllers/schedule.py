@@ -1,15 +1,17 @@
-from App.controllers.user import get_all_users_by_role, get_all_shifts
-from App.models.schedule import Schedule
+from App.controllers.report import get_summary
+from App.models.report import Report
 
+def generate_report(scheduleID, adminID):
+    """
+    Generate a Report object for a given schedule.
+    Calls get_summary() from report controller and formats the result.
+    """
+    summary_dict = get_summary(scheduleID)
 
-def create_even_schedule(all_staff, shifts):
-    # write function
-    pass
+    report = Report(
+        schedule_id=scheduleID,
+        admin_id=adminID,
+        summary=summary_dict.get("summary", "")
+    )
 
-def create_minimum_schedule(all_staff, shifts):
-    # write function
-    pass
-
-def create_day_night_schedule(all_staff, shifts):
-    # write function
-    pass
+    return report
