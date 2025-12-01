@@ -9,7 +9,7 @@ from App.models import User
 from App.main import create_app 
 from App.controllers import (
     create_user, get_all_users_json, get_all_users, initialize,
-    schedule_shift, get_combined_roster, clock_in, clock_out, get_shift_report, login,loginCLI
+    schedule_shift, get_combined_roster, clock_in, clock_out, view_report, login,loginCLI
 )
 
 app = create_app()
@@ -150,8 +150,11 @@ def clockin_command(shift_id):
 @click.argument("shift_id", type=int)
 def clockout_command(shift_id):
     staff = require_staff_login()
-    shift = clock_out(staff.id, shift_id)
-    print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    try:
+        shift = clock_out(staff.id, shift_id)
+        print(f"🕕 {staff.username} clocked out: {shift.get_json()}")
+    except Exception as e:
+        print(f"⚠️ Unexpected error: {e}")
 
 
 app.cli.add_command(shift_cli)
@@ -188,12 +191,17 @@ def assign_shift_command(shift_id, staff_id):
 app.cli.add_command(schedule_cli)
 
 
-@shift_cli.command("report", help="Admin views shift report")
-def report_command():
+@shift_cli.command("report", help="Admin views shift report summary")
+@click.argument("schedule_id", type=int)
+def report_command(scheduleID):
     admin = require_admin_login()
-    report = get_shift_report(admin.id)
-    print(f"📊 Shift report for {admin.username}:")
-    print(report)
+    try:
+        report = view_report(scheduleID, admin.id)
+        print(f"📊 Shift report summary:")
+        print(report)
+    except Exception as e:
+        print(f"❌ Report could not be viewed: {e}")
+    
 
 app.cli.add_command(shift_cli)
 
