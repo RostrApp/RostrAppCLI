@@ -18,6 +18,6 @@ class SchedulingStrategy(ABC):
     
 
     @abstractmethod
-    def fill_schedule(self, staff, schedule):
+    def fill_schedule(self, staff_list, schedule):
         #return Schedule object in concrete classes
         pass

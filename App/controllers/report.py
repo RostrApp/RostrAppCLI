@@ -26,15 +26,15 @@ def get_summary(scheduleID):
 
         status = shift.status
         
-        if status == ShiftStatus.SCH:
+        if status == ShiftStatus.SCHEDULED:
             days[day]["scheduled"].add(staff.username)
-        elif status == ShiftStatus.COM:
+        elif status == ShiftStatus.COMPLETED:
             days[day]["completed"].add(staff.username)
-        elif status == ShiftStatus.LAT:
+        elif status == ShiftStatus.LATE:
             days[day]["late"].add(staff.username)
-        elif status == ShiftStatus.MIS:
+        elif status == ShiftStatus.MISSED:
             days[day]["missed"].add(staff.username)
-        elif status == ShiftStatus.ONG:
+        elif status == ShiftStatus.ONGOING:
             days[day]["ongoing"].add(staff.username)
 
     # Convert sets to lists

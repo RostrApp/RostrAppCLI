@@ -9,17 +9,18 @@ class ShiftStatus(Enum):
     MISSED = "Missed"
     LATE = "Late"
 
-class ShiftStatus(PyEnum):
-    SCH = "scheduled"
-    COM = "completed"
-    MIS = "missed"
-    LAT = "late"
-    ONG = "ongoing"
+#class ShiftStatus(PyEnum):
+#    SCH = "scheduled"
+#    COM = "completed"
+#    MIS = "missed"
+#    LAT = "late"
+#    ONG = "ongoing"
 
 class Shift(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     staff_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    
+    schedule_id = db.Column(db.Integer, db.ForeignKey("schedule.id"), nullable=False)# added this
+
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
     
@@ -31,8 +32,8 @@ class Shift(db.Model):
         default=ShiftStatus.SCHEDULED,
         nullable=False
     )
-    
     staff = db.relationship("Staff", backref="shifts", foreign_keys=[staff_id])
+    schedule = db.relationship("Schedule", back_populates="shifts")# added this
 
     @classmethod
     def get_shift(cls, shift_id):

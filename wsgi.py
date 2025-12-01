@@ -8,18 +8,15 @@ from App.database import db, get_migrate
 from App.models import User
 from App.main import create_app 
 from App.controllers import (
-    create_user, get_all_users_json, get_all_users, initialize,
-    schedule_shift, get_combined_roster, clock_in, clock_out, view_report, login,loginCLI
+    create_user, get_all_users_json, get_all_users, initialize, clock_in, clock_out, view_report, login,loginCLI
 )
+from App.controllers.admin import schedule_shift
 from App.models.schedule import Schedule
 from App.models.shift import Shift
-from App.controllers.user import get_all_users_by_role, schedule_shift
-from App.auth import require_admin_login
+from App.controllers.user import get_all_users_by_role
 from App.services.strategies.even_scheduler import EvenScheduler
 from App.services.strategies.minimum_scheduler import MinimumScheduler
 from App.services.strategies.day_night_scheduler import DayNightScheduler
-
-admin = require_admin_login()
 
 
 app = create_app()
@@ -89,8 +86,7 @@ def schedule_shift_command(mode, args):
     from App.database import db
     from App.models.schedule import Schedule
     from App.models.shift import Shift
-    from App.controllers.user import get_all_users_by_role, schedule_shift
-    from App.auth import require_admin_login
+    from App.controllers.user import get_all_users_by_role
     from App.services.strategies.even_scheduler import EvenScheduler
     from App.services.strategies.minimum_scheduler import MinimumScheduler
     from App.services.strategies.day_night_scheduler import DayNightScheduler
@@ -154,6 +150,7 @@ def schedule_shift_command(mode, args):
 app.cli.add_command(shift_cli)
 
 @shift_cli.command("roster", help="Staff views combined roster")
+@click.argument("schedule_id", type=int)
 def roster_command(schedule_id):
     staff = require_staff_login()
     from App.controllers import viewSchedule
