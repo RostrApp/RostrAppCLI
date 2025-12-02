@@ -16,7 +16,9 @@ def create_schedule(start_date, end_date, admin_id):
     db.session.commit()
     return new_schedule
 
-#assign all staff to a weekly schedule using a scheduling strategy
+#assign all staff to a weekly schedule using a scheduler
+from App.services.scheduler import Scheduler
+
 def schedule_week(strategy, schedule_id, staff_list, admin_id):
     admin = get_user(admin_id)
 
@@ -38,7 +40,13 @@ def schedule_week(strategy, schedule_id, staff_list, admin_id):
     if not valid_staff:
         raise ValueError("No valid staff members to schedule")
 
-    strategy.fill_schedule(valid_staff, schedule)
+    # ✅ Use Scheduler wrapper instead of calling strategy directly
+    scheduler = Scheduler(strategy)
+    scheduler.fill_schedule(valid_staff, schedule)
+
+    db.session.commit()
+    return schedule
+
     
 
 #create a shift and add it to a schedule
