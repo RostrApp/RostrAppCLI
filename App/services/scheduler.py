@@ -9,5 +9,5 @@ class Scheduler():
     def set_strategy(self, strategy):
         self.strategy = strategy
     
-    def fill_schedule(self, staff, schedule):
-        self.strategy.fill_schedule()
+    def fill_schedule(self, staff_list, schedule):
+        self.strategy.fill_schedule(staff_list, schedule)

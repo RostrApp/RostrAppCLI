@@ -6,7 +6,8 @@ class Schedule(db.Model):
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
     admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    shifts = db.relationship("Shift", backref="schedule", lazy=True)
+    #shifts = db.relationship("Shift", backref="schedule", lazy=True)
+    shifts = db.relationship("Shift", back_populates="schedule", cascade="all, delete-orphan")
 
     def get_json(self):
         return {

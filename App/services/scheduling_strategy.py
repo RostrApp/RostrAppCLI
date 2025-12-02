@@ -4,7 +4,7 @@ from App.models.schedule import Schedule
 from App.controllers.user import get_all_users_by_role, get_all_shifts
 
 class SchedulingStrategy(ABC):
-    @abstractmethod
+    #@abstractmethod
     def __init__(self):
         super().__init__()
 
@@ -18,6 +18,6 @@ class SchedulingStrategy(ABC):
     
 
     @abstractmethod
-    def fill_schedule(self, staff, schedule):
+    def fill_schedule(self, staff_list, schedule):
         #return Schedule object in concrete classes
         pass

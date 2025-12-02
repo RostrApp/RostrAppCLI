@@ -76,4 +76,4 @@ def view_report(schedule_id, admin_id):
     if not schedule:
         raise ValueError("Invalid schedule ID")
 
-    return generate_report(schedule_id)
+    return generate_report(schedule_id, admin_id)
