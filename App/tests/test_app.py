@@ -728,72 +728,68 @@ def test_app():
 
 import unittest
 from datetime import datetime
-from App.database import db
 from App.models import User, Schedule, Shift
-from App.services.strategies.even_scheduler import EvenScheduler
+from App.services.strategies.even_scheduler import EvenScheduler 
 from App.services.strategies.minimum_scheduler import MinimumScheduler
 from App.services.strategies.day_night_scheduler import DayNightScheduler
+from App.controllers.admin import schedule_week
+from App.database import db
 
-class TestSchedulerIntegration(unittest.TestCase): #Works
+class TestSchedulerIntegration(unittest.TestCase):
 
     def setUp(self):
-        # Clear DB before each test
         db.drop_all()
         db.create_all()
 
-        # Create two staff users
+        # Create admin + staff
+        self.admin = User(username="admin", password="pass", role="admin")
         self.staff1 = User(username="s1", password="pass", role="staff")
         self.staff2 = User(username="s2", password="pass", role="staff")
-        db.session.add_all([self.staff1, self.staff2])
+        db.session.add_all([self.admin, self.staff1, self.staff2])
         db.session.commit()
 
-    def test_even_scheduler_distribution(self):
+    def test_admin_schedule_week_even(self):
         schedule = Schedule(
             start_date=datetime(2025, 12, 2),
             end_date=datetime(2025, 12, 4),
-            admin_id=1
+            admin_id=self.admin.id
         )
-
-        strategy = EvenScheduler()
-        strategy.fill_schedule([self.staff1, self.staff2], schedule)
-
         db.session.add(schedule)
         db.session.commit()
+
+        schedule_week(EvenScheduler(), schedule.id, [self.staff1.id, self.staff2.id], self.admin.id)
 
         shifts = Shift.query.filter_by(schedule_id=schedule.id).all()
         staff_ids = [s.staff_id for s in shifts]
+        # Expect roughly even distribution
         self.assertTrue(abs(staff_ids.count(self.staff1.id) - staff_ids.count(self.staff2.id)) <= 1)
 
-    def test_minimum_scheduler_assigns_to_least_loaded(self):
+    def test_admin_schedule_week_minimum(self):
         schedule = Schedule(
             start_date=datetime(2025, 12, 2),
             end_date=datetime(2025, 12, 4),
-            admin_id=1
+            admin_id=self.admin.id
         )
-
-        strategy = MinimumScheduler()
-        strategy.fill_schedule([self.staff1, self.staff2], schedule)
-
         db.session.add(schedule)
         db.session.commit()
+
+        schedule_week(MinimumScheduler(), schedule.id, [self.staff1.id, self.staff2.id], self.admin.id)
 
         shifts = Shift.query.filter_by(schedule_id=schedule.id).all()
         # Expect all shifts assigned to staff1
         for s in shifts:
             self.assertEqual(s.staff_id, self.staff1.id)
 
-    def test_daynight_scheduler_assigns_correctly(self):
+    def test_admin_schedule_week_daynight(self):
         schedule = Schedule(
             start_date=datetime(2025, 12, 2),
             end_date=datetime(2025, 12, 3),
-            admin_id=1
+            admin_id=self.admin.id
         )
-
-        strategy = DayNightScheduler()
-        strategy.fill_schedule([self.staff1, self.staff2], schedule)
-
         db.session.add(schedule)
         db.session.commit()
+
+        schedule_week(DayNightScheduler(), schedule.id, [self.staff1.id, self.staff2.id], self.admin.id)
 
         shifts = Shift.query.filter_by(schedule_id=schedule.id).all()
         for s in shifts:
