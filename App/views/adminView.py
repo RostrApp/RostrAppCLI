@@ -69,7 +69,7 @@ def createShift():
 def shiftReport():
     try:
         admin_id = get_jwt_identity()
-        report = admin.get_shift_report(admin_id)  # Call controller method
+        report = admin.view_report(admin_id)  # Call controller method
         return jsonify(report), 200
     except (PermissionError, ValueError) as e:
         return jsonify({"error": str(e)}), 403
