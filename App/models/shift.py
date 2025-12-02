@@ -32,7 +32,7 @@ class Shift(db.Model):
         default=ShiftStatus.SCHEDULED,
         nullable=False
     )
-    staff = db.relationship("Staff", backref="shifts", foreign_keys=[staff_id])
+    staff = db.relationship("User", backref="shifts", foreign_keys=[staff_id])
     schedule = db.relationship("Schedule", back_populates="shifts")# added this
 
     @classmethod

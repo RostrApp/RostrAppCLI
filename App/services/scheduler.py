@@ -4,7 +4,7 @@ class Scheduler():
     # class diagram uses composition so I assume Scheduler class should be 
     # initialized with a strategy
     def __init__(self, strategy):
-        self.setStrategy(strategy)
+        self.set_strategy(strategy)
 
     def set_strategy(self, strategy):
         self.strategy = strategy
