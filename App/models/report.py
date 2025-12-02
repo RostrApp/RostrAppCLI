@@ -12,8 +12,9 @@ class Report(db.Model):
     def get_json(self):
         return {
             "admin_id": self.admin_id,
-            "admin_name": self.admin.username,
-            "generated_date": self.generated_date.isoformat()
+            #"admin_name": self.admin.username,
+            "generated_date": self.generated_date.isoformat(),
+            "summary": self.summary
         }
 
     def __init__(self, admin_id, generated_date, summary):

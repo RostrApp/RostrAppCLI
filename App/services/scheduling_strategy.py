@@ -4,7 +4,7 @@ from App.models.schedule import Schedule
 from App.controllers.user import get_all_users_by_role, get_all_shifts
 
 class SchedulingStrategy(ABC):
-    @abstractmethod
+    #@abstractmethod
     def __init__(self):
         super().__init__()
 

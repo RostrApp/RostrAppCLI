@@ -13,7 +13,7 @@ def generate_report(scheduleID, adminID):
         #schedule_id=scheduleID,
         admin_id=adminID,
         generated_date=datetime.now(),#added this
-        summary=summary_dict.get("summary", "")
+        summary=summary_dict
     )
 
     return report

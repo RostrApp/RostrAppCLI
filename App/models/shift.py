@@ -84,7 +84,7 @@ class Shift(db.Model):
         elif now < self.start_time:
             self.status = ShiftStatus.SCHEDULED 
         
-        def get_json(self):
+    def get_json(self):
             return {
                 "id": self.id,
                 "staff_id": self.staff_id,
