@@ -1,68 +1,88 @@
 # app/views/staff_views.py
 from flask import Blueprint, jsonify, request
-from App.controllers import staff, auth
+from App.controllers import staff
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.exc import SQLAlchemyError
 
 staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 
-#Based on the controllers in App/controllers/staff.py, staff can do the following actions:
-# 1. View combined roster
-# 2. Clock in 
-# 3. Clock out
-# 4. View specific shift details
+# Refactored staff views 
 
 staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 
-# Staff view roster route
-@staff_views.route('/staff/roster', methods=['GET'])
+# Staff view schedule roster route (calls ViewSchedule)
+# GET /staff/schedule/<schedule_id>
+
+@staff_views.route('/staff/schedule/<int:schedule_id>', methods=['GET'])
 @jwt_required()
-def view_roster():
+def view_schedule(schedule_id):
     try:
-        staff_id = get_jwt_identity()  # get the user id stored in JWT
-        # staffData = staff.get_user(staff_id).get_json()  # Fetch staff data
-        roster = staff.get_combined_roster(staff_id)  # staff.get_combined_roster should return the json data of the roseter
+        staff_id = int(get_jwt_identity())
+        roster = staff.viewSchedule(staff_id, schedule_id)
         return jsonify(roster), 200
+    except PermissionError as e:
+        return jsonify({"error": str(e)}), 403
     except SQLAlchemyError:
         return jsonify({"error": "Database error"}), 500
 
-@staff_views.route('/staff/shift', methods=['GET'])
+
+# Staff view shifts for a schedule route (calls ViewShifts)
+# GET /staff/shifts/<schedule_id>
+
+@staff_views.route('/staff/shifts/<int:schedule_id>', methods=['GET'])
 @jwt_required()
-def view_shift():
+def view_shifts(schedule_id):
     try:
-        data = request.get_json()
-        shift_id = data.get("shiftID")  # gets the shiftID from the request
-        shift = staff.get_shift(shift_id)  # Call controller
+        staff_id = int(get_jwt_identity())
+        shifts = staff.viewShifts(staff_id, schedule_id)
+        return jsonify(shifts), 200
+    except PermissionError as e:
+        return jsonify({"error": str(e)}), 403
+    except SQLAlchemyError:
+        return jsonify({"error": "Database error"}), 500
+
+
+# View a specific shift
+# GET /staff/shift/<shift_id>
+
+@staff_views.route('/staff/shift/<int:shift_id>', methods=['GET'])
+@jwt_required()
+def view_shift(shift_id):
+    try:
+        shift = staff.Shift.get_shift(shift_id)
         if not shift:
             return jsonify({"error": "Shift not found"}), 404
         return jsonify(shift.get_json()), 200
     except SQLAlchemyError:
         return jsonify({"error": "Database error"}), 500
 
-# Staff Clock in endpoint
-@staff_views.route('/staff/clock_in', methods=['POST'])
+
+
+# Staff Clock In
+# POST /staff/clock_in/shift_id
+
+@staff_views.route('/staff/clock_in/<int:shift_id>', methods=['POST'])
 @jwt_required()
-def clockIn():
+def clock_in_view(shift_id):
     try:
         staff_id = int(get_jwt_identity())# db uses int for userID so we must convert
-        data = request.get_json()
-        shift_id = data.get("shiftID")  # gets the shiftID from the request
-        shiftOBJ = staff.clock_in(staff_id, shift_id)  # Call controller
-        return jsonify(shiftOBJ.get_json()), 200
+        shift = staff.clock_in(staff_id, shift_id)  # Call controller
+        return jsonify(shift.get_json()), 200
     except (PermissionError, ValueError) as e:
         return jsonify({"error": str(e)}), 403
     except SQLAlchemyError:
         return jsonify({"error": "Database error"}), 500
 
 
-# Staff Clock in endpoint
-@staff_views.route('/staff/clock_out/', methods=['POST'])
+
+# Staff Clock Out
+# POST /staff/clock_out/shift_id
+
+@staff_views.route('/staff/clock_out/<int:shift_id>', methods=['POST'])
 @jwt_required()
-def clock_out():
+def clock_out_view(shift_id):
     try:
         staff_id = int(get_jwt_identity()) # db uses int for userID so we must convert
-        data = request.get_json()
-        shift_id = data.get("shiftID")  # gets the shiftID from the request
         shift = staff.clock_out(staff_id, shift_id)  # Call controller
         return jsonify(shift.get_json()), 200
     except (PermissionError, ValueError) as e:
