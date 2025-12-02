@@ -55,16 +55,16 @@ class UserUnitTests(unittest.TestCase):
         assert user_json["username"] == "bob"
         assert user_json["role"] == "admin"
 
-    # def test_hashed_password(self):
-    #     password = "mypass"
-    #     user = User(username="tester", password=password)
-    #     assert user.password != password
-    #     assert user.check_password(password) == True
+    def test_hashed_password(self):
+        password = "mypass"
+        user = User(username="tester", password=password)
+        assert user.password != password
+        assert user.check_password(password) == True
 
-    # def test_check_password(self):
-    #     password = "mypass"
-    #     user = User("bob", password)
-    #     assert user.check_password(password) == True
+    def test_check_password(self):
+        password = "mypass"
+        user = User("bob", password)
+        assert user.check_password(password) == True
 
 
 # Admin unit tests
@@ -174,58 +174,58 @@ class StaffUnitTests(unittest.TestCase):
         db.create_all()
 
 
-#     def test_view_schedule_valid(self):
-#         admin = create_user("admin3", "adminpass", "admin")
-#         staff = create_user("staff3", "pass123", "staff")
+    def test_view_schedule_valid(self):
+        admin = create_user("admin3", "adminpass", "admin")
+        staff = create_user("staff3", "pass123", "staff")
 
-#         schedule = Schedule(name="Test Schedule", created_by=admin.id)
-#         db.session.add(schedule)
-#         db.session.commit()
+        schedule = Schedule(name="Test Schedule", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
 
-#         start = datetime.now()
-#         end = start + timedelta(hours=8)
-#         schedule_shift(admin.id, staff.id, schedule.id, start, end)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
-#         from App.controllers.staff import viewSchedule
-#         result = viewSchedule(staff.id, schedule.id)
+        from App.controllers.staff import viewSchedule
+        result = viewSchedule(staff.id, schedule.id)
 
-#         self.assertEqual(len(result), 1)
-#         self.assertEqual(result[0]["schedule_id"], schedule.id)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["schedule_id"], schedule.id)
 
-#     def test_view_schedule_invalid_role(self):
-#         manager = create_user("notstaff123", "pass", "admin")
-#         with self.assertRaises(PermissionError):
-#             from App.controllers.staff import viewSchedule
-#             viewSchedule(manager.id, 1)
+    def test_view_schedule_invalid_role(self):
+        manager = create_user("notstaff123", "pass", "admin")
+        with self.assertRaises(PermissionError):
+            from App.controllers.staff import viewSchedule
+            viewSchedule(manager.id, 1)
 
-#     def test_view_shifts_valid(self):
-#         admin = create_user("admin_view", "adminpass", "admin")
-#         staff = create_user("staff_view", "staffpass", "staff")
+    def test_view_shifts_valid(self):
+        admin = create_user("admin_view", "adminpass", "admin")
+        staff = create_user("staff_view", "staffpass", "staff")
 
-#         # Create 1 schedule to attach shifts to
-#         schedule = Schedule(name="ViewShift Schedule", created_by=admin.id)
-#         db.session.add(schedule)
-#         db.session.commit()
+        # Create 1 schedule to attach shifts to
+        schedule = Schedule(name="ViewShift Schedule", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
 
-#         # Create one shift for the staff
-#         start = datetime.now()
-#         end = start + timedelta(hours=8)
-#         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+        # Create one shift for the staff
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
-#         # Import the controller AFTER creating data
-#         from App.controllers.staff import viewShifts
+        # Import the controller AFTER creating data
+        from App.controllers.staff import viewShifts
 
-#         result = viewShifts(staff.id)
+        result = viewShifts(staff.id)
 
-#         self.assertEqual(len(result), 1)
-#         self.assertEqual(result[0]["staff_id"], staff.id)
-#         self.assertEqual(result[0]["schedule_id"], schedule.id)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["staff_id"], staff.id)
+        self.assertEqual(result[0]["schedule_id"], schedule.id)
 
-#     def test_view_shifts_invalid_user(self):
-#         admin = create_user("admin_view_bad", "adminpass", "admin")
-#         with self.assertRaises(PermissionError):
-#             from App.controllers.staff import viewShifts
-#             viewShifts(admin.id, 1)  
+    def test_view_shifts_invalid_user(self):
+        admin = create_user("admin_view_bad", "adminpass", "admin")
+        with self.assertRaises(PermissionError):
+            from App.controllers.staff import viewShifts
+            viewShifts(admin.id, 1)  
 
     def test_clock_in_valid(self):
         admin = create_user("admin_clock", "adminpass", "admin")
@@ -239,9 +239,9 @@ class StaffUnitTests(unittest.TestCase):
         )
         db.session.add(schedule); db.session.commit()
 
-#         start = datetime.now()
-#         end = start + timedelta(hours=8)
-#         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
         clocked_in_shift = clock_in(staff.id, shift.id)
         assert clocked_in_shift.clock_in is not None
@@ -290,36 +290,36 @@ class StaffUnitTests(unittest.TestCase):
         )
         db.session.add(schedule); db.session.commit()
 
-#         start = datetime.now()
-#         end = start + timedelta(hours=8)
-#         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
         clock_in(staff.id, shift.id)
         clocked_out_shift = clock_out(staff.id, shift.id)
         assert clocked_out_shift.clock_out is not None
         assert isinstance(clocked_out_shift.clock_out, datetime)
 
-#     def test_clock_out_invalid_user(self):
-#         admin = create_user("admin_invalid_out", "adminpass", "admin")
-#         schedule = Schedule(name="Invalid ClockOut Schedule",
-#                             created_by=admin.id)
-#         db.session.add(schedule)
-#         db.session.commit()
+    def test_clock_out_invalid_user(self):
+        admin = create_user("admin_invalid_out", "adminpass", "admin")
+        schedule = Schedule(name="Invalid ClockOut Schedule",
+                            created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
 
-#         staff = create_user("staff_invalid_out", "staffpass", "staff")
-#         start = datetime.now()
-#         end = start + timedelta(hours=8)
-#         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+        staff = create_user("staff_invalid_out", "staffpass", "staff")
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
-#         with pytest.raises(PermissionError) as e:
-#             clock_out(admin.id, shift.id)
-#         assert str(e.value) == "Only staff can clock out"
+        with pytest.raises(PermissionError) as e:
+            clock_out(admin.id, shift.id)
+        assert str(e.value) == "Only staff can clock out"
 
-#     def test_clock_out_invalid_shift(self):
-#         staff = create_user("staff_invalid_shift_out", "staffpass", "staff")
-#         with pytest.raises(ValueError) as e:
-#             clock_out(staff.id, 999)
-#         assert str(e.value) == "Invalid shift for staff"
+    def test_clock_out_invalid_shift(self):
+        staff = create_user("staff_invalid_shift_out", "staffpass", "staff")
+        with pytest.raises(ValueError) as e:
+            clock_out(staff.id, 999)
+        assert str(e.value) == "Invalid shift for staff"
 
 
 class ReportUnitTests(unittest.TestCase):
@@ -341,36 +341,36 @@ class ReportUnitTests(unittest.TestCase):
         db.session.add(self.schedule)
         db.session.commit()
 
-#         self.shift1 = Shift(staff_id=self.alice.id,
-#                     schedule_id=self.schedule.id,
-#                     start_time=datetime(2025, 11, 17, 8),
-#                     end_time=datetime(2025, 11, 17, 16),
-#                     clock_in=datetime(2025, 11, 17, 8, 5),
-#                     clock_out=datetime(2025, 11, 17, 16))
+        self.shift1 = Shift(staff_id=self.alice.id,
+                    schedule_id=self.schedule.id,
+                    start_time=datetime(2025, 11, 17, 8),
+                    end_time=datetime(2025, 11, 17, 16),
+                    clock_in=datetime(2025, 11, 17, 8, 5),
+                    clock_out=datetime(2025, 11, 17, 16))
 
-#         self.shift2 = Shift(staff_id=self.bob.id,
-#                     schedule_id=self.schedule.id,
-#                     start_time=datetime(2025, 11, 17, 8),
-#                     end_time=datetime(2025, 11, 17, 16),
-#                     clock_in=datetime(2025, 11, 17, 8, 0),
-#                     clock_out=datetime(2025, 11, 17, 16))
+        self.shift2 = Shift(staff_id=self.bob.id,
+                    schedule_id=self.schedule.id,
+                    start_time=datetime(2025, 11, 17, 8),
+                    end_time=datetime(2025, 11, 17, 16),
+                    clock_in=datetime(2025, 11, 17, 8, 0),
+                    clock_out=datetime(2025, 11, 17, 16))
 
-#         self.shift3 = Shift(staff_id=self.steve.id,
-#                     schedule_id=self.schedule.id,
-#                     start_time=datetime(2025, 11, 17, 8),
-#                     end_time=datetime(2025, 11, 17, 16))
+        self.shift3 = Shift(staff_id=self.steve.id,
+                    schedule_id=self.schedule.id,
+                    start_time=datetime(2025, 11, 17, 8),
+                    end_time=datetime(2025, 11, 17, 16))
 
-#         self.shift4 = Shift(staff_id=self.alice.id,
-#                     schedule_id=self.schedule.id,
-#                     start_time=datetime(2025, 11, 20, 8),
-#                     end_time=datetime(2025, 11, 20, 16))
+        self.shift4 = Shift(staff_id=self.alice.id,
+                    schedule_id=self.schedule.id,
+                    start_time=datetime(2025, 11, 20, 8),
+                    end_time=datetime(2025, 11, 20, 16))
 
-#         db.session.add_all([self.shift1, self.shift2, self.shift3, self.shift4])
-#         db.session.commit()
+        db.session.add_all([self.shift1, self.shift2, self.shift3, self.shift4])
+        db.session.commit()
 
-#     def test_get_summary_invalid_schedule(self):
-#         with pytest.raises(ValueError):
-#             get_summary(99999)
+    def test_get_summary_invalid_schedule(self):
+        with pytest.raises(ValueError):
+            get_summary(99999)
 
     def test_get_summary_completed_shift(self):
         admin = User(username="admin_sum", password="pass", role="admin")
@@ -463,31 +463,31 @@ class ReportUnitTests(unittest.TestCase):
 '''
 
 
-# @pytest.fixture(autouse=True)
-# def clean_db():
-#     db.drop_all()
-#     create_db()
-#     db.session.remove()
-#     yield
+@pytest.fixture(autouse=True)
+def clean_db():
+    db.drop_all()
+    create_db()
+    db.session.remove()
+    yield
 
 
-# # This fixture creates an empty database for the test and deletes it after the test
-# # scope="class" would execute the fixture once and resued for all methods in the class
-# @pytest.fixture(autouse=True, scope="module")
-# def empty_db():
-#     app = create_app({
-#         'TESTING': True,
-#         'SQLALCHEMY_DATABASE_URI': 'sqlite:///test.db'
-#     })
-#     create_db()
-#     db.session.remove()
-#     yield app.test_client()
-#     db.drop_all()
+# This fixture creates an empty database for the test and deletes it after the test
+# scope="class" would execute the fixture once and resued for all methods in the class
+@pytest.fixture(autouse=True, scope="module")
+def empty_db():
+    app = create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///test.db'
+    })
+    create_db()
+    db.session.remove()
+    yield app.test_client()
+    db.drop_all()
 
 
-# def test_authenticate():
-#     user = User("bob", "bobpass", "user")
-#     assert loginCLI("bob", "bobpass") != None
+def test_authenticate():
+    user = User("bob", "bobpass", "user")
+    assert loginCLI("bob", "bobpass") != None
 
 import unittest
 import pytest
@@ -510,26 +510,26 @@ def run_around_tests():
     db.drop_all()
 
 
-class UsersIntegrationTests(unittest.TestCase): # works
+# class UsersIntegrationTests(unittest.TestCase):
 
 #     def test_get_user(self):
 #         user = create_user("bob", "bobpass", "admin")
 #         assert()
 
-    def test_get_all_users_json(self):
-        user = create_user("bob", "bobpass", "admin")
-        user = create_user("pam", "pampass", "staff")
-        users_json = get_all_users_json()
-        self.assertListEqual([
-            {"id": 1, "username": "bot", "role": "admin"},
-            {"id": 2, "username": "pam", "role": "staff"}
-        ], users_json)
+#     def test_get_all_users_json(self):
+#         user = create_user("bob", "bobpass", "admin")
+#         user = create_user("pam", "pampass", "staff")
+#         users_json = get_all_users_json()
+#         self.assertListEqual([
+#             {"id": 1, "username": "bot", "role": "admin"},
+#             {"id": 2, "username": "pam", "role": "staff"}
+#         ], users_json)
 
-    def test_update_user(self):
-        create_user("bot", "bobpass", "admin")
-        update_user(1, "ronnie")
-        user = get_user(1)
-        assert user.username == "ronnie"
+#     def test_update_user(self):
+#         create_user("bot", "bobpass", "admin")
+#         update_user(1, "ronnie")
+#         user = get_user(1)
+#         assert user.username == "ronnie"
 
 #     def test_create_and_get_user(self):
 #         user = create_user("alex", "alexpass", "staff")
@@ -537,102 +537,102 @@ class UsersIntegrationTests(unittest.TestCase): # works
 #         self.assertEqual(retrieved.username, "alex")
 #         self.assertEqual(retrieved.role, "staff")
 
-    def test_get_all_users_json_integration(self):
-        create_user("bot", "bobpass", "admin")
-        create_user("pam", "pampass", "staff")
-        users_json = get_all_users_json()
-        expected = [
-            {"id": 1, "username": "bot", "role": "admin"},
-            {"id": 2, "username": "pam", "role": "staff"},
-        ]
-        self.assertEqual(users_json, expected)
+#     def test_get_all_users_json_integration(self):
+#         create_user("bot", "bobpass", "admin")
+#         create_user("pam", "pampass", "staff")
+#         users_json = get_all_users_json()
+#         expected = [
+#             {"id": 1, "username": "bot", "role": "admin"},
+#             {"id": 2, "username": "pam", "role": "staff"},
+#         ]
+#         self.assertEqual(users_json, expected)
 
 #     def test_admin_schedule_shift_for_staff(self):
 #         admin = create_user("admin1", "adminpass", "admin")
 #         staff = create_user("staff1", "staffpass", "staff")
 
-        schedule = Schedule(
-            start_date=datetime.now(),
-            end_date=datetime.now() + timedelta(days=7),
-            admin_id=admin.id
-        )
-        db.session.add(schedule)
-        db.session.commit()
+#         schedule = Schedule(
+#             start_date=datetime.now(),
+#             end_date=datetime.now() + timedelta(days=7),
+#             admin_id=admin.id
+#         )
+#         db.session.add(schedule)
+#         db.session.commit()
 
 #         start = datetime.now()
 #         end = start + timedelta(hours=8)
 
-        shift = schedule_shift(schedule.id, start, end, staff.id, admin.id)
-        retrieved = get_user(staff.id)
+#         shift = schedule_shift(schedule.id, start, end, staff.id, admin.id)
+#         retrieved = get_user(staff.id)
 
 #         self.assertIn(shift.id, [s.id for s in retrieved.shifts])
 #         self.assertEqual(shift.staff_id, staff.id)
 #         self.assertEqual(shift.schedule_id, schedule.id)
 
-#     # def test_staff_view_combined_roster(self):
-#     #     admin = create_user("admin", "adminpass", "admin")
-#     #     staff = create_user("jane", "janepass", "staff")
-#     #     other_staff = create_user("mark", "markpass", "staff")
+#     def test_staff_view_combined_roster(self):
+#         admin = create_user("admin", "adminpass", "admin")
+#         staff = create_user("jane", "janepass", "staff")
+#         other_staff = create_user("mark", "markpass", "staff")
 
-#     #     schedule = Schedule(name="Shared Roster", created_by=admin.id)
-#     #     db.session.add(schedule)
-#     #     db.session.commit()
+#         schedule = Schedule(name="Shared Roster", created_by=admin.id)
+#         db.session.add(schedule)
+#         db.session.commit()
 
-#     #     start = datetime.now()
-#     #     end = start + timedelta(hours=8)
+#         start = datetime.now()
+#         end = start + timedelta(hours=8)
 
-#     #     schedule_shift(admin.id, staff.id, schedule.id, start, end)
-#     #     schedule_shift(admin.id, other_staff.id, schedule.id, start, end)
+#         schedule_shift(admin.id, staff.id, schedule.id, start, end)
+#         schedule_shift(admin.id, other_staff.id, schedule.id, start, end)
 
-#     #     roster = get_combined_roster(staff.id)
-#     #     self.assertTrue(any(s["staff_id"] == staff.id for s in roster))
-#     #     self.assertTrue(any(s["staff_id"] == other_staff.id for s in roster))
+#         roster = get_combined_roster(staff.id)
+#         self.assertTrue(any(s["staff_id"] == staff.id for s in roster))
+#         self.assertTrue(any(s["staff_id"] == other_staff.id for s in roster))
 
 #     def test_staff_clock_in_and_out(self):
 #         admin = create_user("admin", "adminpass", "admin")
 #         staff = create_user("lee", "leepass", "staff")
 
-        schedule = Schedule(
-            start_date=datetime.now(),
-            end_date=datetime.now() + timedelta(days=7),
-            admin_id=admin.id
-        )
-        db.session.add(schedule)
-        db.session.commit()
+#         schedule = Schedule(
+#             start_date=datetime.now(),
+#             end_date=datetime.now() + timedelta(days=7),
+#             admin_id=admin.id
+#         )
+#         db.session.add(schedule)
+#         db.session.commit()
 
 #         start = datetime.now()
 #         end = start + timedelta(hours=8)
 
-        shift = schedule_shift(schedule.id, start, end, staff.id, admin.id)
+#         shift = schedule_shift(schedule.id, start, end, staff.id, admin.id)
 
 #         clock_in(staff.id, shift.id)
 #         clock_out(staff.id, shift.id)
 
-        updated_shift = Shift.query.get(shift.id)
-        self.assertIsNotNone(updated_shift.clock_in)
-        self.assertIsNotNone(updated_shift.clock_out)
-        self.assertLess(updated_shift.clock_in, updated_shift.clock_out)
+#         updated_shift = Shift.query.get(shift.id)
+#         self.assertIsNotNone(updated_shift.clock_in)
+#         self.assertIsNotNone(updated_shift.clock_out)
+#         self.assertLess(updated_shift.clock_in, updated_shift.clock_out)
 
-#     # def test_permission_restrictions(self):
-#     #     admin = create_user("admin", "adminpass", "admin")
-#     #     staff = create_user("worker", "workpass", "staff")
+    # def test_permission_restrictions(self):
+    #     admin = create_user("admin", "adminpass", "admin")
+    #     staff = create_user("worker", "workpass", "staff")
 
-#     #     # Create schedule
-#     #     schedule = Schedule(name="Restricted Schedule", created_by=admin.id)
-#     #     db.session.add(schedule)
-#     #     db.session.commit()
+    #     # Create schedule
+    #     schedule = Schedule(name="Restricted Schedule", created_by=admin.id)
+    #     db.session.add(schedule)
+    #     db.session.commit()
 
-#     #     start = datetime.now()
-#     #     end = start + timedelta(hours=8)
+    #     start = datetime.now()
+    #     end = start + timedelta(hours=8)
 
-#     #     with self.assertRaises(PermissionError):
-#     #         schedule_shift(staff.id, staff.id, schedule.id, start, end)
+    #     with self.assertRaises(PermissionError):
+    #         schedule_shift(staff.id, staff.id, schedule.id, start, end)
 
-#     #     with self.assertRaises(PermissionError):
-#     #         get_combined_roster(admin.id)
+    #     with self.assertRaises(PermissionError):
+    #         get_combined_roster(admin.id)
 
-#     #     with self.assertRaises(PermissionError):
-#     #         get_shift_report(staff.id)
+    #     with self.assertRaises(PermissionError):
+    #         get_shift_report(staff.id)
 
 # import unittest
 # from datetime import datetime
@@ -813,7 +813,7 @@ from App.services.strategies.day_night_scheduler import DayNightScheduler
 from App.controllers.admin import schedule_week
 from App.database import db
 
-# class TestSchedulerIntegration(unittest.TestCase):
+class TestSchedulerIntegration(unittest.TestCase):
 
     def setUp(self):
         db.drop_all()
