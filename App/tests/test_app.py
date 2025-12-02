@@ -11,11 +11,11 @@ from App.controllers import (
     get_user,
     update_user,
     schedule_shift, 
-    get_shift_report,
-    get_combined_roster,
+    #get_shift_report,
+    #get_combined_roster,
     clock_in,
     clock_out,
-    get_shift 
+    #get_shift 
 )
 
 # Test get_all_users_by_role(role) and get_all_users_by_role_json(role)
@@ -589,3 +589,99 @@ class ScheduleIntegrationTests(unittest.TestCase):
         assigned_staff_ids = [shift.staff_id for shift in retrieved_schedule.shifts]
         self.assertIn(staff[0].id, assigned_staff_ids)
         self.assertIn(staff[1].id, assigned_staff_ids)
+
+import pytest
+from datetime import datetime
+from App.main import create_app
+from App.database import db
+from App.models import User, Schedule, Shift
+from App.services.strategies.even_scheduler import EvenScheduler
+from App.services.strategies.minimum_scheduler import MinimumScheduler
+from App.services.strategies.day_night_scheduler import DayNightScheduler
+
+@pytest.fixture
+def test_app():
+    app = create_app("testing")
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+
+import unittest
+from datetime import datetime
+from App.database import db
+from App.models import User, Schedule, Shift
+from App.services.strategies.even_scheduler import EvenScheduler
+from App.services.strategies.minimum_scheduler import MinimumScheduler
+from App.services.strategies.day_night_scheduler import DayNightScheduler
+
+class TestSchedulerIntegration(unittest.TestCase):
+
+    def setUp(self):
+        # Clear DB before each test
+        db.drop_all()
+        db.create_all()
+
+        # Create two staff users
+        self.staff1 = User(username="s1", password="pass", role="staff")
+        self.staff2 = User(username="s2", password="pass", role="staff")
+        db.session.add_all([self.staff1, self.staff2])
+        db.session.commit()
+
+    def test_even_scheduler_distribution(self):
+        schedule = Schedule(
+            start_date=datetime(2025, 12, 2),
+            end_date=datetime(2025, 12, 4),
+            admin_id=1
+        )
+
+        strategy = EvenScheduler()
+        strategy.fill_schedule([self.staff1, self.staff2], schedule)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        shifts = Shift.query.filter_by(schedule_id=schedule.id).all()
+        staff_ids = [s.staff_id for s in shifts]
+        self.assertTrue(abs(staff_ids.count(self.staff1.id) - staff_ids.count(self.staff2.id)) <= 1)
+
+    def test_minimum_scheduler_assigns_to_least_loaded(self):
+        schedule = Schedule(
+            start_date=datetime(2025, 12, 2),
+            end_date=datetime(2025, 12, 4),
+            admin_id=1
+        )
+
+        strategy = MinimumScheduler()
+        strategy.fill_schedule([self.staff1, self.staff2], schedule)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        shifts = Shift.query.filter_by(schedule_id=schedule.id).all()
+        # Expect all shifts assigned to staff1
+        for s in shifts:
+            self.assertEqual(s.staff_id, self.staff1.id)
+
+    def test_daynight_scheduler_assigns_correctly(self):
+        schedule = Schedule(
+            start_date=datetime(2025, 12, 2),
+            end_date=datetime(2025, 12, 3),
+            admin_id=1
+        )
+
+        strategy = DayNightScheduler()
+        strategy.fill_schedule([self.staff1, self.staff2], schedule)
+
+        db.session.add(schedule)
+        db.session.commit()
+
+        shifts = Shift.query.filter_by(schedule_id=schedule.id).all()
+        for s in shifts:
+            if s.start_time.hour == 8:
+                self.assertEqual(s.staff_id, self.staff1.id)
+            elif s.start_time.hour == 18:
+                self.assertEqual(s.staff_id, self.staff2.id)
