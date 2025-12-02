@@ -3,19 +3,23 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from App.main import create_app
 from App.database import db, create_db
 from datetime import datetime, timedelta
-from App.models import User, Schedule, Shift
+from App.models import User, Schedule, Shift, Staff
 from App.controllers import (
     create_user,
     get_all_users_json,
     loginCLI,
     get_user,
     update_user,
+    create_schedule,
     schedule_shift, 
+    schedule_week,
+    view_report,
     #get_shift_report,
     #get_combined_roster,
     clock_in,
     clock_out,
-    #get_shift 
+    get_shift, 
+    get_summary
 )
 
 # Test get_all_users_by_role(role) and get_all_users_by_role_json(role)
@@ -135,30 +139,58 @@ class UserUnitTests(unittest.TestCase):
             assert str(e) == "Only admins can view shift reports"
     
     # Staff unit tests
-    def test_get_combined_roster_valid(self):       
-        staff = create_user("staff3", "pass123", "staff")
+    def test_view_schedule_valid(self):
         admin = create_user("admin3", "adminpass", "admin")
+        staff = create_user("staff3", "pass123", "staff")
+
         schedule = Schedule(name="Test Schedule", created_by=admin.id)
         db.session.add(schedule)
         db.session.commit()
 
-        # create a shift
-        shift = schedule_shift(admin.id, staff.id, schedule.id,
-                               datetime(2025, 10, 23, 8, 0, 0),
-                               datetime(2025, 10, 23, 16, 0, 0))
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
-        roster = get_combined_roster(staff.id)
-        assert len(roster) >= 1
-        assert roster[0]["staff_id"] == staff.id
-        assert roster[0]["schedule_id"] == schedule.id
+        from App.controllers.staff import viewSchedule
+        result = viewSchedule(staff.id, schedule.id)
 
-    def test_get_combined_roster_invalid(self):
-        non_staff = create_user("admin4", "adminpass", "admin")
-        try:
-            get_combined_roster(non_staff.id)
-            assert False, "Expected PermissionError for non-staff"
-        except PermissionError as e:
-            assert str(e) == "Only staff can view roster"
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["schedule_id"], schedule.id)
+
+    def test_view_schedule_invalid_role(self):
+        manager = create_user("notstaff123", "pass", "admin")
+        with self.assertRaises(PermissionError):
+            from App.controllers.staff import viewSchedule
+            viewSchedule(manager.id, 1)
+
+    def test_view_shifts_valid(self):
+        admin = create_user("admin_view", "adminpass", "admin")
+        staff = create_user("staff_view", "staffpass", "staff")
+
+        # Create 1 schedule to attach shifts to
+        schedule = Schedule(name="ViewShift Schedule", created_by=admin.id)
+        db.session.add(schedule)
+        db.session.commit()
+
+        # Create one shift for the staff
+        start = datetime.now()
+        end = start + timedelta(hours=8)
+        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
+
+        # Import the controller AFTER creating data
+        from App.controllers.staff import viewShifts
+
+        result = viewShifts(staff.id)
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["staff_id"], staff.id)
+        self.assertEqual(result[0]["schedule_id"], schedule.id)
+
+    def test_view_shifts_invalid_user(self):
+        admin = create_user("admin_view_bad", "adminpass", "admin")
+        with self.assertRaises(PermissionError):
+            from App.controllers.staff import viewShifts
+            viewShifts(admin.id, 1)  
 
     def test_clock_in_valid(self):
         admin = create_user("admin_clock", "adminpass", "admin")
@@ -168,8 +200,8 @@ class UserUnitTests(unittest.TestCase):
         db.session.add(schedule)
         db.session.commit()
 
-        start = datetime(2025, 10, 25, 8, 0, 0)
-        end = datetime(2025, 10, 25, 16, 0, 0)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
         clocked_in_shift = clock_in(staff.id, shift.id)
@@ -183,8 +215,8 @@ class UserUnitTests(unittest.TestCase):
         db.session.commit()
 
         staff = create_user("staff_invalid", "staffpass", "staff")
-        start = datetime(2025, 10, 26, 8, 0, 0)
-        end = datetime(2025, 10, 26, 16, 0, 0)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
         with pytest.raises(PermissionError) as e:
@@ -205,8 +237,8 @@ class UserUnitTests(unittest.TestCase):
         db.session.add(schedule)
         db.session.commit()
 
-        start = datetime(2025, 10, 27, 8, 0, 0)
-        end = datetime(2025, 10, 27, 16, 0, 0)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
         clocked_out_shift = clock_out(staff.id, shift.id)
@@ -221,8 +253,8 @@ class UserUnitTests(unittest.TestCase):
         db.session.commit()
 
         staff = create_user("staff_invalid_out", "staffpass", "staff")
-        start = datetime(2025, 10, 28, 8, 0, 0)
-        end = datetime(2025, 10, 28, 16, 0, 0)
+        start = datetime.now()
+        end = start + timedelta(hours=8)
         shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
 
         with pytest.raises(PermissionError) as e:
@@ -256,31 +288,31 @@ class ReportUnitTests(unittest.TestCase):
         db.session.add(self.schedule)
         db.session.commit()
 
-        shift1 = Shift(staff_id=self.alice.id,
+        self.shift1 = Shift(staff_id=self.alice.id,
                     schedule_id=self.schedule.id,
                     start_time=datetime(2025, 11, 17, 8),
                     end_time=datetime(2025, 11, 17, 16),
                     clock_in=datetime(2025, 11, 17, 8, 5),
                     clock_out=datetime(2025, 11, 17, 16))
 
-        shift2 = Shift(staff_id=self.bob.id,
+        self.shift2 = Shift(staff_id=self.bob.id,
                     schedule_id=self.schedule.id,
                     start_time=datetime(2025, 11, 17, 8),
                     end_time=datetime(2025, 11, 17, 16),
                     clock_in=datetime(2025, 11, 17, 8, 0),
                     clock_out=datetime(2025, 11, 17, 16))
 
-        shift3 = Shift(staff_id=self.steve.id,
+        self.shift3 = Shift(staff_id=self.steve.id,
                     schedule_id=self.schedule.id,
                     start_time=datetime(2025, 11, 17, 8),
                     end_time=datetime(2025, 11, 17, 16))
 
-        shift4 = Shift(staff_id=self.alice.id,
+        self.shift4 = Shift(staff_id=self.alice.id,
                     schedule_id=self.schedule.id,
                     start_time=datetime(2025, 11, 20, 8),
                     end_time=datetime(2025, 11, 20, 16))
 
-        db.session.add_all([shift1, shift2, shift3, shift4])
+        db.session.add_all([self.shift1, self.shift2, self.shift3, self.shift4])
         db.session.commit()
 
     def test_get_summary_invalid_schedule(self):
@@ -306,13 +338,13 @@ class ReportUnitTests(unittest.TestCase):
         assert self.steve.username in day_data["missed"]
 
     def test_get_summary_scheduled_shift(self):
-        summary = get_summary(schedule.id)
+        summary = get_summary(self.schedule.id)
         day_data = summary["days"]["2025-11-20"]
         assert self.alice.username in day_data["scheduled"]
         
     def test_get_summary_ongoing_shift(self):
-        alice.clock_in(alice.id, shift4.id)
-        summary = get_summary(schedule.id)
+        self.alice.clock_in(self.alice.id, self.shift4.id)
+        summary = get_summary(self.schedule.id)
         day_data = summary["days"]["2025-11-20"]
         assert self.alice.username in day_data["ongoing"]
         
@@ -474,8 +506,8 @@ class UsersIntegrationTests(unittest.TestCase):
     #     with self.assertRaises(PermissionError):
     #         get_combined_roster(admin.id)
 
-        with self.assertRaises(PermissionError):
-            get_shift_report(staff.id)
+    #     with self.assertRaises(PermissionError):
+    #         get_shift_report(staff.id)
 
 import unittest
 from datetime import datetime
