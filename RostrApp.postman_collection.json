@@ -1,0 +1,1309 @@
+{
+	"info": {
+		"_postman_id": "668e7493-84b1-4928-8d3b-a25055d15608",
+		"name": "RostrApp",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42602843"
+	},
+	"item": [
+		{
+			"name": "Init",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"\r",
+							"// Success case\r",
+							"if (pm.response.code === 200) {\r",
+							"    pm.test(\"Init returns 201 Created\", function () {\r",
+							"        pm.response.to.have.status(200);\r",
+							"    });\r",
+							"    pm.test(\"Init success message present\", function () {\r",
+							"        pm.expect(data).to.have.property(\"message\");\r",
+							"        pm.expect(data.message).to.include(\"db initialized!\");\r",
+							"    });\r",
+							"} else {\r",
+							"    // Fail case\r",
+							"    pm.test(\"Init failed with error\", function () {\r",
+							"        pm.expect(pm.response.code).to.be.oneOf([400, 500]);\r",
+							"    });\r",
+							"    pm.test(\"Error message present\", function () {\r",
+							"        pm.expect(data).to.have.property(\"error\");\r",
+							"    });\r",
+							"    console.log(\"Init failed: \" + (data.error || \"Unknown error\"));\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/init",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"init"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Login fails with 401\", function () {\r",
+							"    pm.response.to.have.status(401);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Response contains failure message\", function () {\r",
+							"    let body = pm.response.text();\r",
+							"    pm.expect(body.toLowerCase()).to.include(\"bad username or password\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"staff1\",\r\n  \"password\": \"staffpass\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login(Admin)-Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Admin login returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Admin login returns access token\", function () {\r",
+							"    pm.expect(data).to.have.property(\"access_token\");\r",
+							"});\r",
+							"\r",
+							"if (data.access_token) {\r",
+							"    pm.environment.set(\"auth_token_admin\", data.access_token);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"bob\",\r\n  \"password\": \"bobpass\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Schedule (Admin)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Create schedule fails with 400\", function () {\r",
+							"    pm.response.to.have.status(400);\r",
+							"});\r",
+							"pm.test(\"Error message present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"error\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"start_date\": \"2025-11-30\"\r\n}\r\n\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/createSchedule",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"createSchedule"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Schedule (Admin)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Create schedule returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"ScheduleId present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"id\");\r",
+							"});\r",
+							"if (data.scheduleId) {\r",
+							"    pm.environment.set(\"schedule_id\", data.id);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"start_date\": \"2025-11-30\",\r\n  \"end_date\": \"2025-12-06\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/createSchedule",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"createSchedule"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Schedule Specific Shift (admin)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Schedule shift fails with 400\", function () {\r",
+							"    pm.response.to.have.status(400);\r",
+							"});\r",
+							"pm.test(\"Error message present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"error\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"scheduleId\": 1,\r\n  \"staffId\": 5,\r\n  \"endTime\": \"2025-12-04 17:00:00\"\r\n}\r\n\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/scheduleShift",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"scheduleShift"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Schedule Specific Shift (admin)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Schedule shift returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"ShiftId present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"id\");\r",
+							"});\r",
+							"if (data.shiftId) {\r",
+							"    pm.environment.set(\"shift_id\", data.id);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"scheduleId\": \"1\",\r\n  \"staffId\": \"2\",\r\n  \"startTime\": \"2025-12-04 09:00:00\",\r\n  \"endTime\": \"2025-12-04 17:00:00\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/scheduleShift",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"scheduleShift"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Schedule Week- (Admin)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Schedule week fails with 400 or 404\", function () {\r",
+							"    pm.expect(pm.response.code).to.be.oneOf([400, 404]);\r",
+							"});\r",
+							"pm.test(\"Error message present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"error\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/vnd.api+json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"strategy\": \"bad_scheduler\",\r\n  \"scheduleId\": 1\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/scheduleWeek",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"scheduleWeek"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Schedule Week- Even (Admin)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Schedule week returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Shifts array present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"shifts\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"strategy\": \"even_scheduler\",\r\n  \"scheduleId\": 1\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/scheduleWeek",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"scheduleWeek"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Schedule Week- Daynight(Admin)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Schedule week returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Shifts array present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"shifts\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"strategy\": \"day_night_scheduler\",\r\n  \"scheduleId\": {{schedule_id}}\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/scheduleWeek",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"scheduleWeek"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Schedule Week- Minimum (Admin)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Schedule week returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Shifts array present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"shifts\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"strategy\": \"minimum_scheduler\",\r\n  \"scheduleId\":\"1\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/scheduleWeek",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"scheduleWeek"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Staff Login Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Parse the response JSON\r",
+							"let data = pm.response.json();\r",
+							"pm.test(\"Staff login returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Staff login returns access token\", function () {\r",
+							"    pm.expect(data).to.have.property(\"access_token\");\r",
+							"});\r",
+							"// If token exists, save it to environment\r",
+							"if (data.access_token) {\r",
+							"    pm.environment.set(\"auth_token_staff\", data.access_token);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"jane\",\r\n  \"password\": \"janepass\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/api/login",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Schedule (Staff)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"View schedule fails with 404\", function () {\r",
+							"    pm.response.to.have.status(404);\r",
+							"});\r",
+							"pm.test(\"Error message present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"error\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_staff}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/schedule/{{bad_schedule_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"schedule",
+						"{{bad_schedule_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Schedule( Staff)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"View schedule returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"View schedule returns an array\", function () {\r",
+							"    pm.expect(data).to.be.an('array');\r",
+							"    pm.expect(data.length > 0).to.be.true;\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "Access-Control-Request-Method",
+						"value": "Bearer {{auth_token_staff}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/staff/schedule/{{schedule_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"schedule",
+						"{{schedule_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Shifts for  Schedule( Staff)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Check if the response status code is 404\", function () {\r",
+							"    pm.response.to.have.status(404);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Check if the response body contains the correct error message\", function () { \r",
+							"    pm.expect(pm.response.text()).to.include(\"No shifts found for this schedule\");\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/shifts/{{bad_schedule_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"shifts",
+						"{{bad_schedule_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Shifts for  Schedule( Staff)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"if (data.length > 0 && data[0].shiftId) {\r",
+							"    pm.environment.set(\"shift_id\", data[0].shiftId);\r",
+							"}\r",
+							"\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Response body is an array\", function () {\r",
+							"    pm.expect(data).to.be.an('array');\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Array contains at least one shift\", function () {\r",
+							"    pm.expect(data.length).to.be.at.least(1);\r",
+							"});\r",
+							"\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/shifts/{{schedule_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"shifts",
+						"{{schedule_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Specific Shift( Staff)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Shift not found error\", function () {\r",
+							"    pm.expect(pm.response.json().error).to.eql(\"Shift not found\");\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Status code is 404\", function () {\r",
+							"    pm.response.to.have.status(404);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/shift/999",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"shift",
+						"999"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Specific Shift( Staff)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Response time is less than 200ms\", function () {\r",
+							"    pm.expect(pm.response.responseTime).to.be.below(200);\r",
+							"});\r",
+							"\r",
+							"pm.test(\"Shift ID matches the request ID\", function () {\r",
+							"    pm.expect(pm.response.json().id).to.equal(Number(pm.environment.get(\"shift_id\")));\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/shift/{{shift_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"shift",
+						"{{shift_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clock out ( Staff)- fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// 1. Validate Response Status Code",
+							"pm.test(\"Status code is 403 (Forbbiden)\", function () {",
+							"    pm.response.to.have.status(403);",
+							"});",
+							"",
+							"pm.test(\"Response body contains error message\", function () {",
+							"    pm.expect(pm.response.text()).to.include('Cannot clock out before clocking in');",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/clock_out/{{shift_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"clock_out",
+						"{{shift_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clock in( Staff)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Clock in fails with 403\", function () {\r",
+							"    pm.response.to.have.status(403);\r",
+							"});\r",
+							"pm.test(\"Error message present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"error\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_staff}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/clock_in/999",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"clock_in",
+						"999"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clock in( Staff)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Clock in returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"ClockIn timestamp present\", function () {\r",
+							"    pm.expect(data.clock_in).to.not.be.null;\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/clock_in/{{shift_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"clock_in",
+						"{{shift_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Clock out ( Staff)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"Clock out returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"ClockIn timestamp present\", function () {\r",
+							"    pm.expect(data.clockIn).to.not.be.null;\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer{{auth_token_staff}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/staff/clock_out/{{shift_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"staff",
+						"clock_out",
+						"{{shift_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Report(Admin)- Fail",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"View report fails with 403\", function () {\r",
+							"    pm.response.to.have.status(403);\r",
+							"});\r",
+							"pm.test(\"Error message present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"error\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/viewReport/{{bad_schedule_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"viewReport",
+						"{{bad_schedule_id}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "View Report(Admin)- Success",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let data = pm.response.json();\r",
+							"pm.test(\"View report returns 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"pm.test(\"Report object present\", function () {\r",
+							"    pm.expect(data).to.have.property(\"generated_date\").not.be.null\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{auth_token_admin}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/viewReport/{{schedule_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"viewReport",
+						"{{schedule_id}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
