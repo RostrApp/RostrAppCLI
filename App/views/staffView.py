@@ -10,7 +10,7 @@ staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 
 staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 
-# Staff view schedule roster route (calls ViewSchedule)
+# Staff view schedule roster route (calls view_schedule)
 # GET /staff/schedule/<schedule_id>
 
 @staff_views.route('/staff/schedule/<int:schedule_id>', methods=['GET'])
@@ -18,7 +18,7 @@ staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 def view_schedule(schedule_id):
     try:
         staff_id = int(get_jwt_identity())
-        roster = staff.viewSchedule(staff_id, schedule_id)
+        roster = staff.view_schedule(staff_id, schedule_id)
         return jsonify(roster), 200
     except PermissionError as e:
         return jsonify({"error": str(e)}), 403
@@ -26,7 +26,7 @@ def view_schedule(schedule_id):
         return jsonify({"error": "Database error"}), 500
 
 
-# Staff view shifts for a schedule route (calls ViewShifts)
+# Staff view shifts for a schedule route (calls view_shifts)
 # GET /staff/shifts/<schedule_id>
 
 @staff_views.route('/staff/shifts/<int:schedule_id>', methods=['GET'])
@@ -34,7 +34,7 @@ def view_schedule(schedule_id):
 def view_shifts(schedule_id):
     try:
         staff_id = int(get_jwt_identity())
-        shifts = staff.viewShifts(staff_id, schedule_id)
+        shifts = staff.view_shifts(staff_id, schedule_id)
         return jsonify(shifts), 200
     except PermissionError as e:
         return jsonify({"error": str(e)}), 403

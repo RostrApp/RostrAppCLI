@@ -88,6 +88,7 @@ class Shift(db.Model):
             return {
                 "id": self.id,
                 "staff_id": self.staff_id,
+                "schedule_id": self.schedule_id,
                 "start_time": self.start_time.isoformat(),
                 "end_time": self.end_time.isoformat(),
                 "clock_in": self.clock_in.isoformat() if self.clock_in else None,
