@@ -86,7 +86,17 @@ def scheduleWeek():
         
         schedule_id = int(data["scheduleId"])
         schedule = admin.schedule_week(strategy, schedule_id, staff_list, admin_id)  
-        return jsonify(schedule.get_json()), 200 
+        return jsonify({
+        "shifts": [
+            {
+                "shiftId": shift.id,
+                "staffId": shift.staff_id,
+                "startTime": str(shift.start_time),
+                "endTime": str(shift.end_time)
+            }
+            for shift in schedule.shifts
+        ]
+    }), 200
     except (PermissionError) as e:
         return jsonify({"error": str(e)}), 403
     except SQLAlchemyError as e:

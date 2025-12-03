@@ -19,6 +19,8 @@ def view_schedule(schedule_id):
     try:
         staff_id = int(get_jwt_identity())
         roster = staff.viewSchedule(staff_id, schedule_id)
+        if(schedule_id is None or len(roster) == 0):
+            return jsonify({"error": "Schedule not found"}), 404
         return jsonify(roster), 200
     except PermissionError as e:
         return jsonify({"error": str(e)}), 403
@@ -35,6 +37,8 @@ def view_shifts(schedule_id):
     try:
         staff_id = int(get_jwt_identity())
         shifts = staff.viewShifts(staff_id, schedule_id)
+        if(schedule_id is None or len(shifts) == 0):
+            return jsonify({"error": "No shifts found for this schedule"}), 404
         return jsonify(shifts), 200
     except PermissionError as e:
         return jsonify({"error": str(e)}), 403
