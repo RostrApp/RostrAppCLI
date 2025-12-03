@@ -23,6 +23,7 @@ from App.controllers.schedule import generate_report
 app = create_app()
 migrate = get_migrate(app)
 
+
 @app.cli.command("init", help="Creates and initializes the database")
 def init():
     initialize()
