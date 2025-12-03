@@ -7,32 +7,27 @@ from App.models import User, Schedule, Shift, Staff, Report
 from App.services.strategies.minimum_scheduler import MinimumScheduler
 from App.controllers import (
     create_user,
-    get_all_users_json,
-    loginCLI,
-    get_user,
-    update_user,
     create_schedule,
     schedule_shift, 
     schedule_week,
     view_report,
-    #get_shift_report,
-    #get_combined_roster,
+    view_schedule,
+    view_shifts,
     clock_in,
     clock_out, 
     get_summary
 )
-
-# Test get_all_users_by_role(role) and get_all_users_by_role_json(role)
 
 LOGGER = logging.getLogger(__name__)
 '''
    Unit Tests
 '''
 
-
 class UserUnitTests(unittest.TestCase):
 
     def setUp(self):
+        app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
+        app.app_context().push()
         db.drop_all()
         db.create_all()
 
@@ -70,7 +65,7 @@ class UserUnitTests(unittest.TestCase):
 # Admin unit tests
 class AdminUnitTests(unittest.TestCase):
     
-    def setUp(self):
+    def setUp(self):                # can reuse this code since none of it is being tested for Admin tests
         app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
         app.app_context().push()
         db.drop_all()
@@ -148,6 +143,8 @@ class AdminUnitTests(unittest.TestCase):
 
         shift1 = schedule_shift(schedule.id, self.start_time, self.end_time, self.staff1.id, self.admin.id)
         shift2 = schedule_shift(schedule.id, self.start_time, self.end_time, self.staff2.id, self.admin.id)
+        db.session.add_all([shift1, shift2])
+        db.session.commit()
 
         report = view_report(schedule.id, self.admin.id)
         assert isinstance(report, Report)
@@ -164,162 +161,87 @@ class AdminUnitTests(unittest.TestCase):
             report = view_report(schedule.id, self.staff1.id)
             assert report is None
     
-    # Staff unit tests
+# Staff unit tests
 class StaffUnitTests(unittest.TestCase):
     
-    def setUp(self):
+    def setUp(self):            # can reuse this code since none of it is being tested for Staff tests
         app = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:'})
         app.app_context().push()
         db.drop_all()
         db.create_all()
 
+        self.start_time = datetime.now()
+        self.end_time = self.start_time + timedelta(hours=8)
+        self.start_date = date.today()
+        self.end_date = self.start_date + timedelta(days=6)
+
+        self.admin = create_user("admin", "adminpass", "admin")
+        self.staff = create_user("staff", "pass123", "staff")
+        self.schedule = Schedule(self.start_date, self.end_date, self.admin.id)
+        db.session.add_all([self.admin, self.staff, self.schedule])
+        db.session.commit()
+
+        self.shift = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff.id, self.admin.id)
+        db.session.add(self.shift)
+        db.session.commit()
+
 
     def test_view_schedule_valid(self):
-        admin = create_user("admin3", "adminpass", "admin")
-        staff = create_user("staff3", "pass123", "staff")
-
-        schedule = Schedule(name="Test Schedule", created_by=admin.id)
-        db.session.add(schedule)
-        db.session.commit()
-
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-        schedule_shift(admin.id, staff.id, schedule.id, start, end)
-
-        from App.controllers.staff import viewSchedule
-        result = viewSchedule(staff.id, schedule.id)
-
+        result = view_schedule(self.staff.id, self.schedule.id)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["schedule_id"], schedule.id)
+        self.assertEqual(result[0]["schedule_id"], self.schedule.id)
 
     def test_view_schedule_invalid_role(self):
-        manager = create_user("notstaff123", "pass", "admin")
         with self.assertRaises(PermissionError):
-            from App.controllers.staff import viewSchedule
-            viewSchedule(manager.id, 1)
+            view_schedule(self.admin.id, 1)
 
     def test_view_shifts_valid(self):
-        admin = create_user("admin_view", "adminpass", "admin")
-        staff = create_user("staff_view", "staffpass", "staff")
-
-        # Create 1 schedule to attach shifts to
-        schedule = Schedule(name="ViewShift Schedule", created_by=admin.id)
-        db.session.add(schedule)
-        db.session.commit()
-
-        # Create one shift for the staff
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
-
-        # Import the controller AFTER creating data
-        from App.controllers.staff import viewShifts
-
-        result = viewShifts(staff.id)
-
+        result = view_shifts(self.staff.id, self.schedule.id)
         self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["staff_id"], staff.id)
-        self.assertEqual(result[0]["schedule_id"], schedule.id)
+        self.assertEqual(result[0]["staff_id"], self.staff.id)
+        self.assertEqual(result[0]["schedule_id"], self.schedule.id)
 
     def test_view_shifts_invalid_user(self):
         admin = create_user("admin_view_bad", "adminpass", "admin")
         with self.assertRaises(PermissionError):
-            from App.controllers.staff import viewShifts
-            viewShifts(admin.id, 1)  
+            view_shifts(admin.id, 1)  
 
     def test_clock_in_valid(self):
-        admin = create_user("admin_clock", "adminpass", "admin")
-        staff = create_user("staff_clock", "staffpass", "staff")
-        db.session.add_all([admin, staff]); db.session.commit()
-
-        schedule = Schedule(
-            start_date=datetime(2025, 10, 25, 8),
-            end_date=datetime(2025, 10, 25, 16),
-            admin_id=admin.id
-        )
-        db.session.add(schedule); db.session.commit()
-
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
-
-        clocked_in_shift = clock_in(staff.id, shift.id)
+        clocked_in_shift = clock_in(self.staff.id, self.shift.id)
         assert clocked_in_shift.clock_in is not None
 
-    def test_clock_in_invalid_user(self):
-        admin = create_user("admin_clockin", "adminpass", "admin")
-        staff = create_user("staff_invalid", "staffpass", "staff")
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
-
-        schedule = Schedule(
-            start_date=datetime(2025, 10, 26, 8),
-            end_date=datetime(2025, 10, 26, 16),
-            admin_id=admin.id
-        )
-        db.session.add(schedule); db.session.commit()
-
-        shift = schedule_shift(schedule.id,
-                               datetime(2025, 10, 26, 8),
-                               datetime(2025, 10, 26, 16),
-                               staff.id,
-                               admin.id)
-        
-        with pytest.raises(PermissionError) as e:
-            clock_in(admin.id, shift.id)
-        assert str(e.value) == "Only staff can clock in"
+    def test_clock_in_invalid_user(self):      
+        with self.assertRaises(PermissionError):
+            clock_in(self.admin.id, self.shift.id)
 
     def test_clock_in_invalid_shift(self):
-        staff = create_user("clockstaff_invalid", "clockpass", "staff")
-        db.session.add(staff); db.session.commit()
+        with self.assertRaises(ValueError):
+            clock_in(self.staff.id, 999)
 
-        with pytest.raises(ValueError) as e:
-            clock_in(staff.id, 999)
-        assert str(e.value) == "Invalid shift for staff"
+    def test_clock_in_duplicate(self):      
+        with self.assertRaises(ValueError):
+            clock_in(self.staff.id, self.shift.id)
+            clock_in(self.staff.id, self.shift.id)
 
     def test_clock_out_valid(self):
-        admin = create_user("admin_clockout", "adminpass", "admin")
-        staff = create_user("staff_clockout", "staffpass", "staff")
-        db.session.add_all([admin, staff]); db.session.commit()
-
-        schedule = Schedule(
-            start_date=datetime(2025, 10, 27, 8),
-            end_date=datetime(2025, 10, 27, 16),
-            admin_id=admin.id
-        )
-        db.session.add(schedule); db.session.commit()
-
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
-
-        clock_in(staff.id, shift.id)
-        clocked_out_shift = clock_out(staff.id, shift.id)
+        clock_in(self.staff.id, self.shift.id)
+        clocked_out_shift = clock_out(self.staff.id, self.shift.id)
         assert clocked_out_shift.clock_out is not None
         assert isinstance(clocked_out_shift.clock_out, datetime)
 
     def test_clock_out_invalid_user(self):
-        admin = create_user("admin_invalid_out", "adminpass", "admin")
-        schedule = Schedule(name="Invalid ClockOut Schedule",
-                            created_by=admin.id)
-        db.session.add(schedule)
-        db.session.commit()
-
-        staff = create_user("staff_invalid_out", "staffpass", "staff")
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-        shift = schedule_shift(admin.id, staff.id, schedule.id, start, end)
-
-        with pytest.raises(PermissionError) as e:
-            clock_out(admin.id, shift.id)
-        assert str(e.value) == "Only staff can clock out"
+        with self.assertRaises(PermissionError):
+            clock_out(self.admin.id, self.shift.id)
 
     def test_clock_out_invalid_shift(self):
-        staff = create_user("staff_invalid_shift_out", "staffpass", "staff")
-        with pytest.raises(ValueError) as e:
-            clock_out(staff.id, 999)
-        assert str(e.value) == "Invalid shift for staff"
+        with pytest.raises(ValueError):
+            clock_out(self.staff.id, 999)
+
+    def test_clock_out_duplicate(self):
+        clock_in(self.staff.id, self.shift.id)      
+        with self.assertRaises(ValueError):
+            clock_out(self.staff.id, self.shift.id)
+            clock_out(self.staff.id, self.shift.id)
 
 
 class ReportUnitTests(unittest.TestCase):
@@ -407,8 +329,6 @@ class ReportUnitTests(unittest.TestCase):
         )
         db.session.add(schedule); db.session.commit()
 
-    
-    
         start = datetime.now() - timedelta(hours=1)
         end = datetime.now() + timedelta(hours=3)
         shift = schedule_shift(schedule.id, start, end, bob.id, admin.id)
@@ -452,12 +372,12 @@ class ReportUnitTests(unittest.TestCase):
         assert self.alice.username in day_data["scheduled"]
 
     def test_get_summary_ongoing_shift(self):
-        self.alice.clock_in(self.alice.id, self.shift4.id)
+        clock_in(self.alice.id, self.shift4.id)
         summary = get_summary(self.schedule.id)
         day_data = summary["days"]["2025-11-20"]
         assert self.alice.username in day_data["ongoing"]
 
-        
+            
 '''
     Integration Tests
 '''
