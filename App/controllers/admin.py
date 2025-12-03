@@ -39,11 +39,11 @@ def schedule_week(strategy, schedule_id, staff_list, admin_id):
 
     if not valid_staff:
         raise ValueError("No valid staff members to schedule")
-
-    # ✅ Use Scheduler wrapper instead of calling strategy directly
+   
+    #use Scheduler wrapper instead of calling strategy directly
     scheduler = Scheduler(strategy)
     scheduler.fill_schedule(valid_staff, schedule)
-
+    
     db.session.commit()
     return schedule
 
