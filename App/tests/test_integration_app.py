@@ -16,11 +16,10 @@ from App.controllers import (
     get_all_users_by_role,
     get_all_users_by_role_json,
     schedule_week,
-    schedule_shift, 
-    view_report, 
+    schedule_shift,
     clock_in, 
     clock_out,
-    generate_report, 
+    get_summary, 
     loginCLI
 )
 
@@ -387,34 +386,6 @@ class ScheduleIntegrationTests(unittest.TestCase): #works
                 self.assertEqual(s.staff_id, self.staff2.id)
 
 
-import pytest
-from datetime import datetime
-from App.main import create_app
-from App.database import db
-from App.models import User, Schedule, Shift
-from App.services.strategies.even_scheduler import EvenScheduler
-from App.services.strategies.minimum_scheduler import MinimumScheduler
-from App.services.strategies.day_night_scheduler import DayNightScheduler
-
-@pytest.fixture
-def test_app():
-    app = create_app("testing")
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-        yield app
-        db.session.remove()
-        db.drop_all()
-
-
-import unittest
-from datetime import datetime
-from App.models import User, Schedule, Shift
-from App.services.strategies.even_scheduler import EvenScheduler 
-from App.services.strategies.minimum_scheduler import MinimumScheduler
-from App.services.strategies.day_night_scheduler import DayNightScheduler
-from App.controllers.admin import schedule_week
-from App.database import db
 
 class TestSchedulerIntegration(unittest.TestCase):
 
@@ -478,3 +449,72 @@ class TestSchedulerIntegration(unittest.TestCase):
                 self.assertEqual(s.staff_id, self.staff1.id)
             elif s.start_time.hour == 18:
                 self.assertEqual(s.staff_id, self.staff2.id)
+
+class ReportIntegrationTests(unittest.TestCase):
+
+    def setUp(self):
+        db.drop_all()
+        db.create_all()
+        self.admin = create_user("admin", "adminpass", "admin")
+        self.staff = create_user("staff", "staffpass", "staff")
+        # self.staff2 = create_user("staff2", "staffpass", "staff")
+        # self.staff3 = create_user("staff3", "staffpass", "staff")
+        # self.staff4 = create_user("staff4", "staffpass", "staff")
+        self.staff_list = [self.staff.id] #, self.staff2.id, self.staff3.id]
+        db.session.add_all([self.admin, self.staff]) #, self.staff2, self.staff3])
+        db.session.commit()
+
+        self.start_time = datetime.now()
+        self.end_time = self.start_time + timedelta(hours=8)
+        self.start_date = date.today()
+        self.end_date = self.start_date + timedelta(days=6)
+
+        self.schedule = Schedule(self.start_date, self.end_date, self.admin.id)
+        db.session.add(self.schedule)
+        db.session.commit()
+
+        self.shift = schedule_shift(self.schedule.id, self.start_date, self.end_date, self.staff.id, self.admin.id)
+        db.session.add(self.shift)
+        db.session.commit()
+
+    def test_get_summary_completed_shift(self):
+        
+        self.shift.clock_in = self.start_time
+        self.shift.clock_out = self.end_time
+        self.shift.updateStatus()
+        db.session.commit()
+
+        summary = get_summary(self.schedule.id)
+        day_data = summary["days"][self.start_time.strftime("%Y-%m-%d")]
+        staff_user = User.query.get(self.shift.staff_id)
+        assert staff_user.username in day_data["completed"]
+
+    def test_get_summary_late_shift(self):
+        self.shift.clock_in = self.start_date - timedelta(hours=1)
+        self.shift.clock_out = self.end_time
+        self.shift.updateStatus()
+        db.session.commit()
+
+        summary = get_summary(self.schedule.id)
+        day_key = self.shift.clock_in.strftime("%Y-%m-%d")
+        day_data = summary["days"][day_key]
+        staff_user = User.query.get(self.shift.staff_id)
+        assert staff_user.username in day_data["late"]
+
+    def test_get_summary_missed_shift(self):
+        self.shift.updateStatus()
+        db.session.commit()
+        summary = get_summary(self.schedule.id)
+        day_data = summary["days"][self.start_time.strftime("%Y-%m-%d")]
+        assert self.staff.username in day_data["missed"]
+
+    def test_get_summary_scheduled_shift(self):
+        summary = get_summary(self.schedule.id)
+        day_data = summary["days"][self.start_time.strftime("%Y-%m-%d")]
+        assert self.staff.username in day_data["scheduled"]
+
+    def test_get_summary_ongoing_shift(self):
+        clock_in(self.staff.id, self.shift.id)
+        summary = get_summary(self.schedule.id)
+        day_data = summary["days"][self.start_time.strftime("%Y-%m-%d")]
+        assert self.staff.username in day_data["ongoing"]
