@@ -2,9 +2,10 @@ from App.models import Shift, Schedule
 from App.database import db
 from App.controllers.user import get_user
 from App.controllers.schedule import generate_report
+from App.services.scheduler import Scheduler
 
-#create an empty schedule with start and end date
-def create_schedule(start_date, end_date, admin_id):
+
+def create_schedule(start_date, end_date, admin_id):        #create an empty schedule with start and end date
     admin = get_user(admin_id)
     
     if not admin or admin.role != "admin":
@@ -16,10 +17,8 @@ def create_schedule(start_date, end_date, admin_id):
     db.session.commit()
     return new_schedule
 
-#assign all staff to a weekly schedule using a scheduler
-from App.services.scheduler import Scheduler
 
-def schedule_week(strategy, schedule_id, staff_list, admin_id):
+def schedule_week(strategy, schedule_id, staff_list, admin_id):     #assign all staff to a weekly schedule using a scheduler
     admin = get_user(admin_id)
 
     if not admin or admin.role != "admin":
@@ -40,8 +39,8 @@ def schedule_week(strategy, schedule_id, staff_list, admin_id):
     if not valid_staff:
         raise ValueError("No valid staff members to schedule")
    
-    #use Scheduler wrapper instead of calling strategy directly
-    scheduler = Scheduler(strategy)
+    
+    scheduler = Scheduler(strategy)     #use Scheduler wrapper instead of calling strategy directly
     scheduler.fill_schedule(valid_staff, schedule)
     
     db.session.commit()
@@ -49,8 +48,8 @@ def schedule_week(strategy, schedule_id, staff_list, admin_id):
 
     
 
-#create a shift and add it to a schedule
-def schedule_shift(schedule_id, start_time, end_time, staff_id, admin_id):
+
+def schedule_shift(schedule_id, start_time, end_time, staff_id, admin_id):      #create a shift and add it to a schedule
     admin = get_user(admin_id)
     staff = get_user(staff_id)
     schedule = db.session.get(Schedule, schedule_id)

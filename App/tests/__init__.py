@@ -1,1 +1,1 @@
-from App.tests import test_app
+from App.tests import test_integration_app, test_unit_app
