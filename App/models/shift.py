@@ -35,6 +35,15 @@ class Shift(db.Model):
     staff = db.relationship("User", backref="shifts", foreign_keys=[staff_id])
     schedule = db.relationship("Schedule", back_populates="shifts")# added this
 
+    def __init__(self, staff_id, schedule_id, start_time, end_time, clock_in=None, clock_out=None):
+        self.staff_id = staff_id
+        self.schedule_id = schedule_id
+        self.start_time = start_time
+        self.end_time = end_time
+        self.clock_in = clock_in
+        self.clock_out = clock_out
+        self.status = ShiftStatus.SCHEDULED
+    
     @classmethod
     def get_shift(cls, shift_id):
         return db.session.get(cls, shift_id)
@@ -88,6 +97,7 @@ class Shift(db.Model):
             return {
                 "id": self.id,
                 "staff_id": self.staff_id,
+                "schedule_id": self.schedule_id,
                 "start_time": self.start_time.isoformat(),
                 "end_time": self.end_time.isoformat(),
                 "clock_in": self.clock_in.isoformat() if self.clock_in else None,

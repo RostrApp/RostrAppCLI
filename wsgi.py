@@ -153,9 +153,9 @@ def schedule_shift_command(mode, args):
 @click.argument("schedule_id", type=int)
 def roster_command(schedule_id):
     staff = require_staff_login()
-    from App.controllers import viewSchedule
+    from App.controllers import view_schedule
 
-    roster = viewSchedule(staff.id, schedule_id)
+    roster = view_schedule(staff.id, schedule_id)
     print(f"📋 Roster for Schedule {schedule_id}:")
     print(roster)
 
@@ -199,9 +199,9 @@ def report_command(schedule_id):
 @click.argument("schedule_id", type=int)
 def view_shifts_command(schedule_id):
     staff = require_staff_login()
-    from App.controllers import viewShifts
+    from App.controllers import view_shifts
 
-    shifts = viewShifts(staff.id, schedule_id)
+    shifts = view_shifts(staff.id, schedule_id)
     print(f"📋 Shifts for {staff.username} in Schedule {schedule_id}:")
     
     if not shifts:

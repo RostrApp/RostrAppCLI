@@ -10,7 +10,7 @@ staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 
 staff_views = Blueprint('staff_views', __name__, template_folder='../templates')
 
-# Staff view schedule roster route (calls ViewSchedule)
+# Staff view schedule roster route (calls view_schedule)
 # GET /staff/schedule/<schedule_id>
 
 @staff_views.route('/staff/schedule/<int:schedule_id>', methods=['GET'])
@@ -28,7 +28,7 @@ def view_schedule(schedule_id):
         return jsonify({"error": "Database error"}), 500
 
 
-# Staff view shifts for a schedule route (calls ViewShifts)
+# Staff view shifts for a schedule route (calls view_shifts)
 # GET /staff/shifts/<schedule_id>
 
 @staff_views.route('/staff/shifts/<int:schedule_id>', methods=['GET'])

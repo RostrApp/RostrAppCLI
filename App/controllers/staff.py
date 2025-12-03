@@ -3,7 +3,7 @@ from App.database import db
 from datetime import datetime
 from App.controllers.user import get_user
 
-def viewShifts(staff_id, schedule_id):
+def view_shifts(staff_id, schedule_id):
     """
      Shows only the current staff member's shifts for a given schedule
      fixed:
@@ -23,7 +23,7 @@ def viewShifts(staff_id, schedule_id):
     return [s.get_json() for s in shifts]
 
 
-def viewSchedule(staff_id, schedule_id):
+def view_schedule(staff_id, schedule_id):
     # Combined view of all shifts in a schedule for staff members
     # Replaces get_combined_roster()
     
