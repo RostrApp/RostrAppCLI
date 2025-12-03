@@ -1,8 +1,8 @@
-import os, tempfile, pytest, logging, unittest, datetime
+import os, tempfile, pytest, logging, unittest, datetime, time
 from datetime import datetime, timedelta, date
 from App.main import create_app
 from App.database import db, create_db
-from App.models import User, Schedule, Shift, Staff, Report
+from App.models import User, Schedule, Shift
 from App.services.strategies.even_scheduler import EvenScheduler
 from App.services.strategies.minimum_scheduler import MinimumScheduler
 from App.services.strategies.day_night_scheduler import DayNightScheduler
@@ -17,6 +17,8 @@ from App.controllers import (
     get_all_users_by_role_json,
     schedule_week,
     schedule_shift,
+    view_shifts,
+    view_schedule,
     clock_in, 
     clock_out,
     get_summary, 
@@ -149,7 +151,7 @@ class AdminIntegrationTests(unittest.TestCase):
         self.end_date = self.start_date + timedelta(days=6)
 
         self.schedule = Schedule(self.start_date, self.end_date, self.admin.id)
-        db.session.add_all([self.admin, self.staff, self.schedule])
+        db.session.add_all([self.admin, self.staff, self.staff2, self.staff3, self.schedule])
         db.session.commit()
 
 
@@ -176,72 +178,61 @@ class StaffIntegrationTests(unittest.TestCase):
 
     def setUp(self):
         self.admin = create_user("admin1", "adminpass", "admin")
-        self.staff = create_user("staff1", "staffpass", "staff")
+        self.staff1 = create_user("staff1", "staffpass", "staff")
+        self.staff2 = create_user("staff2", "staffpass", "staff")
 
-    def test_staff_view_combined_roster(self):
-        admin = create_user("admin", "adminpass", "admin")
-        staff = create_user("jane", "janepass", "staff")
-        other_staff = create_user("mark", "markpass", "staff")
+        self.start_time = datetime.now()
+        self.end_time = self.start_time + timedelta(hours=8)
+        self.start_date = date.today()
+        self.end_date = self.start_date + timedelta(days=6)
 
-        schedule = Schedule(name="Shared Roster", created_by=admin.id)
-        db.session.add(schedule)
+        self.schedule = Schedule(self.start_date, self.end_date, self.admin.id)
+
+        db.session.add_all([self.admin, self.staff1, self.staff2, self.schedule])
         db.session.commit()
 
-        start = datetime.now()
-        end = start + timedelta(hours=8)
+    def test_staff_view_shifts(self):
+        shift1 = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff1.id, self.admin.id)
+        shift2 = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff2.id, self.admin.id)
 
-        schedule_shift(admin.id, staff.id, schedule.id, start, end)
-        schedule_shift(admin.id, other_staff.id, schedule.id, start, end)
+        shifts = view_shifts(self.staff1.id, self.schedule.id)
+        assert len(shifts) == 1
+        assert shifts[0]["staff_id"] == self.staff1.id
+        assert "start_time" in shifts[0]
 
-        roster = get_combined_roster(staff.id)
-        self.assertTrue(any(s["staff_id"] == staff.id for s in roster))
-        self.assertTrue(any(s["staff_id"] == other_staff.id for s in roster))
+    def test_staff_view_schedule(self):
+        shift1 = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff1.id, self.admin.id)
+        shift2 = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff2.id, self.admin.id)
 
-    def test_staff_clock_in_and_out(self):
-        admin = create_user("admin", "adminpass", "admin")
-        staff = create_user("lee", "leepass", "staff")
+        schedule = view_schedule(self.staff1.id, self.schedule.id)
+        self.assertTrue(any(s["staff_id"] == self.staff1.id for s in schedule))
+        self.assertTrue(any(s["staff_id"] == self.staff2.id for s in schedule))
 
-        schedule = Schedule(
-            start_date=datetime.now(),
-            end_date=datetime.now() + timedelta(days=7),
-            admin_id=admin.id
-        )
-        db.session.add(schedule)
-        db.session.commit()
+    def test_staff_clock_in_ongoing_shift(self):
+        shift = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff1.id, self.admin.id)
+        clock_in(self.staff1.id, shift.id)
+        updated_shift = Shift.query.get(shift.id)
+        assert updated_shift.clock_in is not None
+        assert updated_shift.status.value == "Ongoing"
+        
 
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-
-        shift = schedule_shift(schedule.id, start, end, staff.id, admin.id)
-
-        clock_in(staff.id, shift.id)
-        clock_out(staff.id, shift.id)
+    def test_staff_clock_in_completed_shift(self):
+        shift = schedule_shift(self.schedule.id, self.start_time, self.end_time, self.staff1.id, self.admin.id)
+        clock_in(self.staff1.id, shift.id)
+        time.sleep(1)       # so clock_out time will be later
+        clock_out(self.staff1.id, shift.id)
 
         updated_shift = Shift.query.get(shift.id)
         self.assertIsNotNone(updated_shift.clock_in)
         self.assertIsNotNone(updated_shift.clock_out)
         self.assertLess(updated_shift.clock_in, updated_shift.clock_out)
+        self.assertEquals(updated_shift.status.value, "Completed")
 
     def test_permission_restrictions(self):
-        admin = create_user("admin", "adminpass", "admin")
-        staff = create_user("worker", "workpass", "staff")
-
-        # Create schedule
-        schedule = Schedule(name="Restricted Schedule", created_by=admin.id)
-        db.session.add(schedule)
-        db.session.commit()
-
-        start = datetime.now()
-        end = start + timedelta(hours=8)
-
         with self.assertRaises(PermissionError):
-            schedule_shift(staff.id, staff.id, schedule.id, start, end)
-
+            view_shifts(self.admin.id, self.schedule.id)
         with self.assertRaises(PermissionError):
-            get_combined_roster(admin.id)
-
-        with self.assertRaises(PermissionError):
-            get_shift_report(staff.id)
+            view_schedule(self.admin.id, self.schedule.id)
 
 
 
@@ -453,18 +444,13 @@ class TestSchedulerIntegration(unittest.TestCase):
 class ReportIntegrationTests(unittest.TestCase):
 
     def setUp(self):
-        db.drop_all()
-        db.create_all()
         self.admin = create_user("admin", "adminpass", "admin")
         self.staff = create_user("staff", "staffpass", "staff")
-        # self.staff2 = create_user("staff2", "staffpass", "staff")
-        # self.staff3 = create_user("staff3", "staffpass", "staff")
-        # self.staff4 = create_user("staff4", "staffpass", "staff")
-        self.staff_list = [self.staff.id] #, self.staff2.id, self.staff3.id]
-        db.session.add_all([self.admin, self.staff]) #, self.staff2, self.staff3])
+        self.staff_list = [self.staff.id]
+        db.session.add_all([self.admin, self.staff])
         db.session.commit()
 
-        self.start_time = datetime.now()
+        self.start_time = datetime.now() - timedelta(hours=1)
         self.end_time = self.start_time + timedelta(hours=8)
         self.start_date = date.today()
         self.end_date = self.start_date + timedelta(days=6)
@@ -473,12 +459,10 @@ class ReportIntegrationTests(unittest.TestCase):
         db.session.add(self.schedule)
         db.session.commit()
 
-        self.shift = schedule_shift(self.schedule.id, self.start_date, self.end_date, self.staff.id, self.admin.id)
-        db.session.add(self.shift)
-        db.session.commit()
 
     def test_get_summary_completed_shift(self):
-        
+        self.shift = schedule_shift(self.schedule.id, self.start_date, self.end_date, self.staff.id, self.admin.id)
+
         self.shift.clock_in = self.start_time
         self.shift.clock_out = self.end_time
         self.shift.updateStatus()
@@ -490,18 +474,21 @@ class ReportIntegrationTests(unittest.TestCase):
         assert staff_user.username in day_data["completed"]
 
     def test_get_summary_late_shift(self):
-        self.shift.clock_in = self.start_date - timedelta(hours=1)
-        self.shift.clock_out = self.end_time
+        self.shift = schedule_shift(self.schedule.id, self.start_date, self.end_date, self.staff.id, self.admin.id)
         self.shift.updateStatus()
         db.session.commit()
 
         summary = get_summary(self.schedule.id)
-        day_key = self.shift.clock_in.strftime("%Y-%m-%d")
+        day_key = self.start_time.strftime("%Y-%m-%d")
         day_data = summary["days"][day_key]
         staff_user = User.query.get(self.shift.staff_id)
         assert staff_user.username in day_data["late"]
 
     def test_get_summary_missed_shift(self):
+        start = self.start_date - timedelta(hours=1)
+        end = datetime.now() - timedelta(hours=1)       # clock_out time is in the past
+        self.shift = schedule_shift(self.schedule.id, start, end, self.staff.id, self.admin.id)
+
         self.shift.updateStatus()
         db.session.commit()
         summary = get_summary(self.schedule.id)
@@ -509,11 +496,15 @@ class ReportIntegrationTests(unittest.TestCase):
         assert self.staff.username in day_data["missed"]
 
     def test_get_summary_scheduled_shift(self):
+        self.shift = schedule_shift(self.schedule.id, self.start_date, self.end_date, self.staff.id, self.admin.id)
+
         summary = get_summary(self.schedule.id)
         day_data = summary["days"][self.start_time.strftime("%Y-%m-%d")]
         assert self.staff.username in day_data["scheduled"]
 
     def test_get_summary_ongoing_shift(self):
+        self.shift = schedule_shift(self.schedule.id, self.start_date, self.end_date, self.staff.id, self.admin.id)
+
         clock_in(self.staff.id, self.shift.id)
         summary = get_summary(self.schedule.id)
         day_data = summary["days"][self.start_time.strftime("%Y-%m-%d")]
